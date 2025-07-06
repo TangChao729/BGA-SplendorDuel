@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+All new Python files must include type hints.
+Use pytest for all new tests.

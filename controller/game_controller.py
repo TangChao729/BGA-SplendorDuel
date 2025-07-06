@@ -5,6 +5,7 @@ from typing import Tuple, Optional
 
 # Import from the correct locations based on your directory structure
 from model.desk import Desk           # desk.py is in model/ directory
+from model.tokens import Token
 from model.actions import ActionType, Action  # actions.py is in model/ directory
 from view.assets import AssetManager  # assets.py is in view/ directory
 from view.game_view import GameView   # game_view.py is in view/ directory
@@ -60,10 +61,10 @@ class GameController:
         """
         x, y = pos
         # Example stub: always return TAKE_TOKENS of first legal combo
-        legal = self.desk.legal_actions()
-        for act in legal:
-            if act.type == ActionType.TAKE_TOKENS:
-                return act
+        # legal = self.desk.legal_actions()
+        # for act in legal:
+        #     if act.type == ActionType.TAKE_TOKENS:
+        #         return act
         self.dialogue = "Click detected at {}, {}".format(x, y)
         return None
 
@@ -96,6 +97,11 @@ if __name__ == '__main__':
     ctrl.desk.players[0].bonuses['green'] = 1
     ctrl.desk.players[0].bonuses['blue'] = 1
     ctrl.desk.players[0].bonuses['white'] = 1   
-    print(ctrl.desk.pyramid.decks.get(1))
+    
     ctrl.desk.players[0].reserved.append(ctrl.desk.pyramid.decks.get(1).draw())  # reserve a card for testing
+    ctrl.desk.board.grid[0][0] = Token('black')
+    ctrl.desk.board.grid[1][1] = Token('red')
+    ctrl.desk.board.grid[2][2] = Token('green')
+    ctrl.desk.board.grid[3][3] = Token('blue')
+    ctrl.desk.board.grid[4][4] = Token('white')
     ctrl.run()

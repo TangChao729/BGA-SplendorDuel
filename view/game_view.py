@@ -45,10 +45,9 @@ class GameView:
 
     def render(self, desk: Desk, dialogue: str = "") -> None:
         self.draw_background()
-        self.draw_main_panel(desk, self.view_split.children["main"])
+        self.draw_main_panel(desk, dialogue, self.view_split.children["main"])
         self.draw_player_panel(desk.players[0], self.right_split.children["player1"])
         self.draw_player_panel(desk.players[1], self.right_split.children["player2"])
-        # self.draw_dialogue_panel(dialogue, self.right_split.children["dialogue"])
         pygame.display.flip()
 
     def _scale_image_to_fit(
@@ -351,19 +350,19 @@ class GameView:
             )
             self.screen.blit(scaled_card, (x, y))
 
-    def draw_main_panel(self, desk: Desk, rect: Tuple[int, int, int, int]) -> None:
+    def draw_main_panel(self, desk: Desk, dialogue: str, rect: Tuple[int, int, int, int]) -> None:
         x0, y0, w, h = rect
         self._draw_boarder(rect)
 
         # 1) build the top‐level vertical split
-        main_split = VSplit((x0, y0, w, h), [("upper", 1), ("lower", 2)])
+        main_split = VSplit((x0, y0, w, h), [("upper", 1), ("lower", 3)])
 
         # 2) grab the exact rectangles it computed
         upper_rect = main_split.children["upper"]
         lower_rect = main_split.children["lower"]
 
         # 3) feed those straight into your HSplit calls
-        upper_split = HSplit(upper_rect, [("bag", 1), ("privilege", 1), ("royal", 2)])
+        upper_split = HSplit(upper_rect, [("bag", 1), ("privilege", 1), ("royal", 2), ("dialogue", 2)])
 
         lower_split = HSplit(lower_rect, [("board", 2), ("pyramid", 3)])
 
@@ -382,6 +381,11 @@ class GameView:
             *Margin(upper_split.children["royal"], (10, 10, 10, 10)).rect
         )
         self._draw_royal(desk, royal_rect)
+
+        dialogue_rect = pygame.Rect(
+            *Margin(upper_split.children["dialogue"], (10, 10, 10, 10)).rect
+        )
+        self._draw_dialogue_panel(dialogue, dialogue_rect)
 
         # Draw lower row: board, pyramid
         board_rect = pygame.Rect(
@@ -414,36 +418,84 @@ class GameView:
         self.screen.blit(scaled_bag, (x, y))
 
         # Draw text at bottom
-        txt = self.font.render(f"Tokens in bag: {desk.bag.counts()}", True, BLACK)
+        txt = self.font.render(f"Tokens in bag: {sum(desk.bag.counts().values())}", True, BLACK)
         self.screen.blit(txt, (rect.x + 10, rect.y + rect.height - 30))
 
     def _draw_privileges(self, desk: Desk, rect: pygame.Rect) -> None:
         self._draw_boarder(rect)
-        remaining_privileges: int = desk.privileges
-        for i in range(remaining_privileges):
-            x = rect.x + 10 + i * 40
-            y = rect.y + 10
-            self.screen.blit(self.assets.privilege, (x, y))
+        split = HSplit(rect, [("privilege_1", 1), ("privilege_2", 1), ("privilege_3", 1)])
+        for i in range(3):
+        # Use *Margin to draw margin on each rect, and within each rect draw privilege
+            if i < desk.privileges:
+                sub_rect = Margin(split.children[f"privilege_{i+1}"], (20, 20, 20, 20)).rect
+                self._draw_boarder(sub_rect)
+                # x = sub_rect[0] + (sub_rect[2] - self.assets.privilege.get_width()) // 2
+                # y = sub_rect[1] + (sub_rect[3] - self.assets.privilege.get_height()) // 2
+                scaled_privilege, (x, y) = self._scale_image_to_fit(
+                    self.assets.privilege, pygame.Rect(sub_rect), margin=0
+                )
+                self.screen.blit(scaled_privilege, (x, y))
+
 
     def _draw_royal(self, desk: Desk, rect: pygame.Rect) -> None:
         self._draw_boarder(rect)
         royals = self.assets.card_sprites["royal"]
-        for i, royal in enumerate(royals):
-            x = rect.x + 10 + i * 100
-            y = rect.y + 10
-            self.screen.blit(royal, (x, y))
-        txt = self.font.render(f"Royals left: {len(desk.royals)}", True, BLACK)
-        self.screen.blit(txt, (rect.x + 40, rect.y + 10))
+
+        split = HSplit(rect, [("royal_1", 1), ("royal_2", 1), ("royal_3", 1), ("royal_4", 1)])
+        for i in range(4):
+            if i < len(desk.royals):
+                sub_rect = Margin(split.children[f"royal_{i+1}"], (5, 5, 5, 5)).rect
+                self._draw_boarder(sub_rect)
+                scaled_royal, (x, y) = self._scale_image_to_fit(
+                    self.assets.card_sprites["royal"][i], pygame.Rect(sub_rect), margin=0
+                )
+                self.screen.blit(scaled_royal, (x, y))
+
+    def _draw_dialogue_panel(self, text: str, rect: Tuple[int, int, int, int]) -> None:
+        pygame.draw.rect(self.screen, BLACK, rect, 2)
+        txt = self.font.render(text, True, BLACK)
+        self.screen.blit(txt, (rect[0] + 10, rect[1] + 10))
 
     def _draw_board(self, desk: Desk, rect: pygame.Rect) -> None:
         self._draw_boarder(rect)
-
         # scale
-        scaled_bag, (x, y) = self._scale_image_to_fit(
+        scaled_board, (x, y) = self._scale_image_to_fit(
             self.assets.board, rect, margin=10
         )
         # draw the scaled board image
-        self.screen.blit(scaled_bag, (x, y))
+        self.screen.blit(scaled_board, (x, y))
+        # TODO: draw the grid based on the board size
+        split = VSplit(rect, [("reminder", 1), ("token_grid", 5)])
+        self._draw_boarder(split.children["reminder"])
+        self._draw_boarder(split.children["token_grid"])
+        split.children["token_grid"] = Margin(split.children["token_grid"], (20, 20, 20, 20)).rect
+        # divide the token grid into 5 rows * 5 columns
+        token_grid_row_split = HSplit(split.children["token_grid"], [("row_1", 1), ("row_2", 1), ("row_3", 1), ("row_4", 1), ("row_5", 1)])
+        for row_idx in range(5):
+            row_rect = token_grid_row_split.children[f"row_{row_idx+1}"]
+            # Split this row into 5 columns
+            col_split = VSplit(row_rect, [
+                (f"col_1", 1),
+                (f"col_2", 1),
+                (f"col_3", 1),
+                (f"col_4", 1),
+                (f"col_5", 1),
+            ])
+            for col_idx in range(5):
+                cell_rect = col_split.children[f"col_{col_idx+1}"]
+                # Apply margin to the cell
+                margin_rect = Margin(cell_rect, (5, 5, 5, 5)).rect
+                # Draw the border for the cell
+                self._draw_boarder(margin_rect)
+                # Draw the token if present
+                token = desk.board.grid[row_idx][col_idx]
+                if token is not None:
+                    # Assume token has a .color attribute and self.assets.token_images dict
+                    token_img = self.assets.token_sprites[token.color]
+                    scaled_token, (tx, ty) = self._scale_image_to_fit(token_img, pygame.Rect(margin_rect), margin=0)
+                    self.screen.blit(scaled_token, (tx, ty))
+
+        
 
     def _draw_pyramid(self, desk: Desk, rect: pygame.Rect) -> None:
         self._draw_boarder(rect)
@@ -561,10 +613,6 @@ class GameView:
             # Draw the scaled card image
             self.screen.blit(scaled_card, (x, y))
 
-    def draw_dialogue_panel(self, text: str, rect: Tuple[int, int, int, int]) -> None:
-        pygame.draw.rect(self.screen, BLACK, rect, 2)
-        txt = self.font.render(text, True, BLACK)
-        self.screen.blit(txt, (rect[0] + 10, rect[1] + 10))
 
     def _draw_boarder(self, rect: Tuple[int, int, int, int]) -> None:
         """
