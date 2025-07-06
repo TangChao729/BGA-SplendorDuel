@@ -1,0 +1,1147 @@
+{
+  "level_1": [
+    {
+      "level": 1,
+      "color": "Black",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 1,
+        "green": 1,
+        "blue": 1,
+        "white": 1
+      },
+      "id": "1-01"
+    },
+    {
+      "level": 1,
+      "color": "Black",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Turn",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 2,
+        "white": 2
+      },
+      "id": "1-02"
+    },
+    {
+      "level": 1,
+      "color": "Black",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Take 2nd same",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 2,
+        "green": 2,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-03"
+    },
+    {
+      "level": 1,
+      "color": "Black",
+      "points": 1,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 3,
+        "blue": 2,
+        "white": 0
+      },
+      "id": "1-04"
+    },
+    {
+      "level": 1,
+      "color": "Black",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 3
+      },
+      "id": "1-05"
+    },
+    {
+      "level": 1,
+      "color": "Red",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 1,
+        "red": 0,
+        "green": 1,
+        "blue": 1,
+        "white": 1
+      },
+      "id": "1-06"
+    },
+    {
+      "level": 1,
+      "color": "Red",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Turn",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 2,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 2
+      },
+      "id": "1-07"
+    },
+    {
+      "level": 1,
+      "color": "Red",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Take 2nd same",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 2,
+        "blue": 2,
+        "white": 0
+      },
+      "id": "1-08"
+    },
+    {
+      "level": 1,
+      "color": "Red",
+      "points": 1,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 3,
+        "white": 2
+      },
+      "id": "1-09"
+    },
+    {
+      "level": 1,
+      "color": "Red",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 0,
+        "black": 3,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-10"
+    },
+    {
+      "level": 1,
+      "color": "Green",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 1,
+        "red": 1,
+        "green": 0,
+        "blue": 1,
+        "white": 1
+      },
+      "id": "1-11"
+    },
+    {
+      "level": 1,
+      "color": "Green",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Turn",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 2,
+        "red": 2,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-12"
+    },
+    {
+      "level": 1,
+      "color": "Green",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Take 2nd same",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 2,
+        "white": 2
+      },
+      "id": "1-13"
+    },
+    {
+      "level": 1,
+      "color": "Green",
+      "points": 1,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 2,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 3
+      },
+      "id": "1-14"
+    },
+    {
+      "level": 1,
+      "color": "Green",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 3,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-15"
+    },
+    {
+      "level": 1,
+      "color": "Blue",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 1,
+        "red": 1,
+        "green": 1,
+        "blue": 0,
+        "white": 1
+      },
+      "id": "1-16"
+    },
+    {
+      "level": 1,
+      "color": "Blue",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Turn",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 2,
+        "green": 2,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-17"
+    },
+    {
+      "level": 1,
+      "color": "Blue",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Take 2nd same",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 2,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 2
+      },
+      "id": "1-18"
+    },
+    {
+      "level": 1,
+      "color": "Blue",
+      "points": 1,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 3,
+        "red": 2,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-19"
+    },
+    {
+      "level": 1,
+      "color": "Blue",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 3,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-20"
+    },
+    {
+      "level": 1,
+      "color": "White",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 1,
+        "red": 1,
+        "green": 1,
+        "blue": 1,
+        "white": 0
+      },
+      "id": "1-21"
+    },
+    {
+      "level": 1,
+      "color": "White",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Turn",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 2,
+        "blue": 2,
+        "white": 0
+      },
+      "id": "1-22"
+    },
+    {
+      "level": 1,
+      "color": "White",
+      "points": 0,
+      "bonus": 1,
+      "ability": "Take 2nd same",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 2,
+        "red": 2,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-23"
+    },
+    {
+      "level": 1,
+      "color": "White",
+      "points": 1,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 3,
+        "green": 2,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-24"
+    },
+    {
+      "level": 1,
+      "color": "White",
+      "points": 0,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 3,
+        "white": 0
+      },
+      "id": "1-25"
+    },
+    {
+      "level": 1,
+      "color": "Points",
+      "points": 3,
+      "bonus": 0,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 4,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-26"
+    },
+    {
+      "level": 1,
+      "color": "Joker",
+      "points": 1,
+      "bonus": 1,
+      "ability": "1 color",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 4,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "1-27"
+    },
+    {
+      "level": 1,
+      "color": "Joker",
+      "points": 0,
+      "bonus": 1,
+      "ability": "1 color",
+      "crowns": 1,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 4
+      },
+      "id": "1-28"
+    },
+    {
+      "level": 1,
+      "color": "Joker",
+      "points": 1,
+      "bonus": 1,
+      "ability": "1 color",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 1,
+        "red": 0,
+        "green": 2,
+        "blue": 0,
+        "white": 2
+      },
+      "id": "1-29"
+    },
+    {
+      "level": 1,
+      "color": "Joker",
+      "points": 1,
+      "bonus": 1,
+      "ability": "1 color",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 1,
+        "red": 2,
+        "green": 0,
+        "blue": 2,
+        "white": 0
+      },
+      "id": "1-30"
+    }
+  ],
+  "level_2": [
+    {
+      "level": 2,
+      "color": "Black",
+      "points": 1,
+      "bonus": 1,
+      "ability": "steal",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 3,
+        "blue": 0,
+        "white": 4
+      },
+      "id": "2-01"
+    },
+    {
+      "level": 2,
+      "color": "Black",
+      "points": 1,
+      "bonus": 2,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 2,
+        "white": 5
+      },
+      "id": "2-02"
+    },
+    {
+      "level": 2,
+      "color": "Black",
+      "points": 2,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 2,
+        "green": 2,
+        "blue": 2,
+        "white": 0
+      },
+      "id": "2-03"
+    },
+    {
+      "level": 2,
+      "color": "Black",
+      "points": 2,
+      "bonus": 1,
+      "ability": "privilege",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 4,
+        "red": 2,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "2-04"
+    },
+    {
+      "level": 2,
+      "color": "Red",
+      "points": 1,
+      "bonus": 1,
+      "ability": "steal",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 4,
+        "red": 0,
+        "green": 0,
+        "blue": 3,
+        "white": 0
+      },
+      "id": "2-05"
+    },
+    {
+      "level": 2,
+      "color": "Red",
+      "points": 1,
+      "bonus": 2,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 5,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 2
+      },
+      "id": "2-06"
+    },
+    {
+      "level": 2,
+      "color": "Red",
+      "points": 2,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 2,
+        "blue": 2,
+        "white": 2
+      },
+      "id": "2-07"
+    },
+    {
+      "level": 2,
+      "color": "Red",
+      "points": 2,
+      "bonus": 1,
+      "ability": "privilege",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 4,
+        "green": 2,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "2-08"
+    },
+    {
+      "level": 2,
+      "color": "Green",
+      "points": 1,
+      "bonus": 1,
+      "ability": "steal",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 4,
+        "green": 0,
+        "blue": 0,
+        "white": 3
+      },
+      "id": "2-09"
+    },
+    {
+      "level": 2,
+      "color": "Green",
+      "points": 1,
+      "bonus": 2,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 2,
+        "red": 5,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "2-10"
+    },
+    {
+      "level": 2,
+      "color": "Green",
+      "points": 2,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 1,
+        "black": 2,
+        "red": 0,
+        "green": 0,
+        "blue": 2,
+        "white": 2
+      },
+      "id": "2-11"
+    },
+    {
+      "level": 2,
+      "color": "Green",
+      "points": 2,
+      "bonus": 1,
+      "ability": "privilege",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 4,
+        "blue": 2,
+        "white": 0
+      },
+      "id": "2-12"
+    },
+    {
+      "level": 2,
+      "color": "Blue",
+      "points": 1,
+      "bonus": 1,
+      "ability": "steal",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 3,
+        "red": 0,
+        "green": 4,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "2-13"
+    },
+    {
+      "level": 2,
+      "color": "Blue",
+      "points": 1,
+      "bonus": 2,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 2,
+        "green": 5,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "2-14"
+    },
+    {
+      "level": 2,
+      "color": "Blue",
+      "points": 2,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 1,
+        "black": 2,
+        "red": 2,
+        "green": 0,
+        "blue": 0,
+        "white": 2
+      },
+      "id": "2-15"
+    },
+    {
+      "level": 2,
+      "color": "Blue",
+      "points": 2,
+      "bonus": 1,
+      "ability": "privilege",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 4,
+        "white": 2
+      },
+      "id": "2-16"
+    },
+    {
+      "level": 2,
+      "color": "White",
+      "points": 1,
+      "bonus": 1,
+      "ability": "steal",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 3,
+        "green": 0,
+        "blue": 4,
+        "white": 0
+      },
+      "id": "2-17"
+    },
+    {
+      "level": 2,
+      "color": "White",
+      "points": 1,
+      "bonus": 2,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 2,
+        "blue": 5,
+        "white": 0
+      },
+      "id": "2-18"
+    },
+    {
+      "level": 2,
+      "color": "White",
+      "points": 2,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 1,
+      "cost": {
+        "pearl": 1,
+        "black": 2,
+        "red": 2,
+        "green": 2,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "2-19"
+    },
+    {
+      "level": 2,
+      "color": "White",
+      "points": 2,
+      "bonus": 1,
+      "ability": "privilege",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 2,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 4
+      },
+      "id": "2-20"
+    },
+    {
+      "level": 2,
+      "color": "Points",
+      "points": 5,
+      "bonus": 0,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 6,
+        "white": 0
+      },
+      "id": "2-21"
+    },
+    {
+      "level": 2,
+      "color": "Joker",
+      "points": 2,
+      "bonus": 1,
+      "ability": "1 color",
+      "crowns": 0,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 6,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "2-22"
+    },
+    {
+      "level": 2,
+      "color": "Joker",
+      "points": 0,
+      "bonus": 1,
+      "ability": "1 color",
+      "crowns": 2,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 6,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "2-23"
+    },
+    {
+      "level": 2,
+      "color": "Joker",
+      "points": 0,
+      "bonus": 1,
+      "ability": "1 color",
+      "crowns": 2,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 6,
+        "white": 0
+      },
+      "id": "2-24"
+    }
+  ],
+  "level_3": [
+    {
+      "level": 3,
+      "color": "Black",
+      "points": 3,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 2,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 3,
+        "green": 5,
+        "blue": 0,
+        "white": 3
+      },
+      "id": "3-01"
+    },
+    {
+      "level": 3,
+      "color": "Black",
+      "points": 4,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 6,
+        "red": 2,
+        "green": 0,
+        "blue": 0,
+        "white": 2
+      },
+      "id": "3-02"
+    },
+    {
+      "level": 3,
+      "color": "Red",
+      "points": 3,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 2,
+      "cost": {
+        "pearl": 1,
+        "black": 3,
+        "red": 0,
+        "green": 3,
+        "blue": 5,
+        "white": 0
+      },
+      "id": "3-03"
+    },
+    {
+      "level": 3,
+      "color": "Red",
+      "points": 4,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 2,
+        "red": 6,
+        "green": 2,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "3-04"
+    },
+    {
+      "level": 3,
+      "color": "Green",
+      "points": 3,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 2,
+      "cost": {
+        "pearl": 1,
+        "black": 0,
+        "red": 3,
+        "green": 0,
+        "blue": 3,
+        "white": 5
+      },
+      "id": "3-05"
+    },
+    {
+      "level": 3,
+      "color": "Green",
+      "points": 4,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 2,
+        "green": 6,
+        "blue": 2,
+        "white": 0
+      },
+      "id": "3-06"
+    },
+    {
+      "level": 3,
+      "color": "Blue",
+      "points": 3,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 2,
+      "cost": {
+        "pearl": 1,
+        "black": 5,
+        "red": 0,
+        "green": 3,
+        "blue": 0,
+        "white": 3
+      },
+      "id": "3-07"
+    },
+    {
+      "level": 3,
+      "color": "Blue",
+      "points": 4,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 2,
+        "blue": 6,
+        "white": 2
+      },
+      "id": "3-08"
+    },
+    {
+      "level": 3,
+      "color": "White",
+      "points": 3,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 2,
+      "cost": {
+        "pearl": 1,
+        "black": 3,
+        "red": 5,
+        "green": 0,
+        "blue": 3,
+        "white": 0
+      },
+      "id": "3-09"
+    },
+    {
+      "level": 3,
+      "color": "White",
+      "points": 4,
+      "bonus": 1,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 2,
+        "red": 0,
+        "green": 0,
+        "blue": 2,
+        "white": 6
+      },
+      "id": "3-10"
+    },
+    {
+      "level": 3,
+      "color": "Points",
+      "points": 6,
+      "bonus": 0,
+      "ability": null,
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 8
+      },
+      "id": "3-11"
+    },
+    {
+      "level": 3,
+      "color": "Joker",
+      "points": 0,
+      "bonus": 1,
+      "ability": "1 color",
+      "crowns": 3,
+      "cost": {
+        "pearl": 0,
+        "black": 8,
+        "red": 0,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "3-12"
+    },
+    {
+      "level": 3,
+      "color": "Joker",
+      "points": 3,
+      "bonus": 1,
+      "ability": "1 color/Turn",
+      "crowns": 0,
+      "cost": {
+        "pearl": 0,
+        "black": 0,
+        "red": 8,
+        "green": 0,
+        "blue": 0,
+        "white": 0
+      },
+      "id": "3-13"
+    }
+  ]
+}

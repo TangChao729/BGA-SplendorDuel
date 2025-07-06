@@ -1,0 +1,9 @@
+# Mapping of game data resources
+cards: "data/cards.json"
+royals: "data/royals.json"
+tokens: "data/tokens.json"
+rules: "support/rules.txt"
+# Placeholder files for future extensions
+privileges: 3
+win_conditions: "data/win_conditions.json"
+board: [5, 5]

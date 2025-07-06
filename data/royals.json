@@ -1,0 +1,8 @@
+{
+  "royals": [
+    { "id": "royal_1", "points": 2, "ability": "STEAL" },
+    { "id": "royal_2", "points": 2, "ability": "PRIVILEGE" },
+    { "id": "royal_3", "points": 2, "ability": "TURN" },
+    { "id": "royal_4", "points": 3, "ability": null }
+  ]
+}

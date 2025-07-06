@@ -1,0 +1,19 @@
+{
+  "win_conditions": [
+    {
+      "id": "prestige_total",
+      "description": "Total prestige points reached or exceeded",
+      "threshold": 20
+    },
+    {
+      "id": "crowns_total",
+      "description": "Total crowns earned reached or exceeded",
+      "threshold": 10
+    },
+    {
+      "id": "prestige_same_color",
+      "description": "Prestige points on cards of the same color reached or exceeded",
+      "threshold": 10
+    }
+  ]
+}
