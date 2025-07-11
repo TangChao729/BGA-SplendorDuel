@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
 
 
 class ActionType(Enum):
@@ -18,6 +19,19 @@ class ActionType(Enum):
     PURCHASE_CARD = "PURCHASE_CARD"
     USE_PRIVILEGE = "USE_PRIVILEGE"
     REPLENISH_BOARD = "REPLENISH_BOARD"
+
+
+class GameState(Enum):
+    """Enumeration of all possible game states."""
+    START_OF_ROUND = "start_of_round"
+    USE_PRIVILEGE = "use_privilege"
+    REPLENISH_BOARD = "replenish_board"
+    CHOOSE_MANDATORY_ACTION = "choose_mandatory_action"
+    PURCHASE_CARD = "purchase_card"
+    TAKE_TOKENS = "take_tokens"
+    TAKE_GOLD_AND_RESERVE = "take_gold_and_reserve"
+    POST_ACTION_CHECKS = "post_action_checks"
+    CONFIRM_ROUND = "confirm_round"
 
 
 class Action:
@@ -66,3 +80,23 @@ class Action:
         action_type = ActionType(data.get("type"))
         payload = data.get("payload", {})
         return cls(action_type, payload)
+
+
+@dataclass
+class ActionButton:
+    """Represents a clickable action button."""
+    text: str
+    action: str
+    enabled: bool = True
+
+
+@dataclass
+class CurrentAction:
+    """Represents the current game state and available actions."""
+    state: GameState
+    explanation: str
+    buttons: List[ActionButton]
+    
+    def __post_init__(self):
+        if not isinstance(self.state, GameState):
+            self.state = GameState(self.state)

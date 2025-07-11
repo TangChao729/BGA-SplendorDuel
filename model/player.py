@@ -33,6 +33,9 @@ class PlayerState:
         self.privileges: int = 0
         self.crowns: int = 0
         self.points: int = 0
+        self.card_points: Dict[str, int] = {
+            c: 0 for c in ["black", "red", "green", "blue", "white"]
+        }
 
     # add token by color str
     def add_tokens(self, list_tokens: List[Token]) -> None:

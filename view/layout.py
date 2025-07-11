@@ -1,7 +1,58 @@
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional, Any
+from dataclasses import dataclass
 
 # A simple rectangle type: (x, y, width, height)
 Rect = Tuple[int, int, int, int]
+
+@dataclass
+class LayoutElement:
+    """Represents a clickable game element with its screen position and metadata."""
+    name: str
+    rect: Rect
+    element_type: str  # 'token', 'card', 'privilege', 'royal', etc.
+    metadata: Dict[str, Any]  # Additional data like level, index, color, etc.
+
+class LayoutRegistry:
+    """
+    Registry for storing layout elements for click detection.
+    Allows mapping screen coordinates to game elements.
+    """
+    def __init__(self):
+        self.elements: List[LayoutElement] = []
+        self.clear()
+    
+    def clear(self) -> None:
+        """Clear all registered elements (call at start of each frame)."""
+        self.elements = []
+    
+    def register(self, name: str, rect: Rect, element_type: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Register a clickable element."""
+        self.elements.append(LayoutElement(
+            name=name,
+            rect=rect,
+            element_type=element_type,
+            metadata=metadata or {}
+        ))
+    
+    def find_element_at(self, pos: Tuple[int, int]) -> Optional[LayoutElement]:
+        """Find the element at the given screen position."""
+        x, y = pos
+        for element in reversed(self.elements):  # Check top-most elements first
+            ex, ey, ew, eh = element.rect
+            if ex <= x < ex + ew and ey <= y < ey + eh:
+                return element
+        return None
+    
+    def find_elements_by_type(self, element_type: str) -> List[LayoutElement]:
+        """Find all elements of a specific type."""
+        return [e for e in self.elements if e.element_type == element_type]
+    
+    def find_elements_by_name(self, name: str) -> List[LayoutElement]:
+        """Find all elements with a specific name pattern."""
+        return [e for e in self.elements if name in e.name]
+
+# Global registry instance
+layout_registry = LayoutRegistry()
 
 class HSplit:
     """
