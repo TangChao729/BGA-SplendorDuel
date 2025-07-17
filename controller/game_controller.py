@@ -1,7 +1,7 @@
 import pygame
 import sys
 import os
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict
 
 # Import from the correct locations based on your directory structure
 from model.desk import Desk           # desk.py is in model/ directory
@@ -10,6 +10,10 @@ from model.actions import ActionType, Action, GameState, CurrentAction, ActionBu
 from view.assets import AssetManager  # assets.py is in view/ directory
 from view.game_view import GameView   # game_view.py is in view/ directory
 from view.layout import layout_registry  # layout.py is in view/ directory
+
+# Import new Phase 1 managers
+from controller.selection_manager import SelectionManager, SelectionType
+from controller.element_state_manager import ElementStateManager, ElementVisualState, ElementState
 
 # Screen dimensions (should match those in game_view)
 from view.game_view import SCREEN_WIDTH, SCREEN_HEIGHT
@@ -40,6 +44,11 @@ class GameController:
         self.pending_action_button: Optional[ActionButton] = None
         self.info_message: str = ""
         self.pending_action: Optional[Action] = None
+        
+        # Phase 1: New managers for improved UI handling
+        self.selection_manager = SelectionManager()
+        self.element_state_manager = ElementStateManager()
+        self.debug_mode = True  # Enable debug mode for Phase 1
 
     def run(self):
         """Main Pygame loop: handle events, update model, render view."""
@@ -52,9 +61,12 @@ class GameController:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         self.running = False
+                    elif event.key == pygame.K_e:
+                        # Debug hotkey: Clear all selections
+                        self.selection_manager.clear_all()
+                        self.dialogue = "Debug: All selections cleared (E key)"
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     action = self._interpret_click(event.pos)
-                    print(f"Current player: {self.desk.current_player.name}")
                     if action:
                         try:
                             self.desk.apply_action(action)
@@ -69,10 +81,111 @@ class GameController:
                             self.pending_action = None
                         except Exception as e:
                             self.dialogue = str(e)
-            # Pass current_action to GameView
-            self.view.render(self.desk, self.dialogue, self.current_action)
+            # Pass current_action and element states to GameView
+            element_states = self._collect_element_states()
+            self.view.render(self.desk, self.dialogue, self.current_action, element_states)
             self.clock.tick(30)
         pygame.quit()
+
+    def _collect_element_states(self) -> Dict[Tuple[str, str], ElementState]:
+        """
+        Collect visual states for all interactive elements in the game.
+        Returns a mapping of (element_type, element_id) to ElementState.
+        """
+        element_states = {}
+        
+        # Collect tokens on the board
+        for row_idx in range(5):
+            for col_idx in range(5):
+                token = self.desk.board.grid[row_idx][col_idx]
+                if token is not None:
+                    element_type = "token"
+                    element_id = f"token_{row_idx}_{col_idx}"
+                    metadata = {"row": row_idx, "col": col_idx, "color": token.color, "token": token}
+                    
+                    state = self.element_state_manager.get_element_state(
+                        element_type, metadata, self.current_state, 
+                        self.selection_manager, self.desk.current_player
+                    )
+                    element_states[(element_type, element_id)] = state
+        
+        # Collect pyramid cards (face-down)
+        for level in [1, 2, 3]:
+            element_type = "pyramid_card"
+            element_id = f"pyramid_card_{level}_{-1}"  # -1 indicates face-down
+            metadata = {"level": level, "index": -1, "deck_type": "face_down"}
+            
+            state = self.element_state_manager.get_element_state(
+                element_type, metadata, self.current_state,
+                self.selection_manager, self.desk.current_player
+            )
+            element_states[(element_type, element_id)] = state
+        
+        # Collect pyramid cards (face-up)
+        for level in [1, 2, 3]:
+            if level in self.desk.pyramid.slots:
+                for i, card in enumerate(self.desk.pyramid.slots[level]):
+                    if card is not None:
+                        element_type = "pyramid_card"
+                        element_id = f"pyramid_card_{level}_{i+1}"
+                        metadata = {"level": level, "index": i+1, "card": card}
+                        
+                        state = self.element_state_manager.get_element_state(
+                            element_type, metadata, self.current_state,
+                            self.selection_manager, self.desk.current_player
+                        )
+                        element_states[(element_type, element_id)] = state
+        
+        # Collect royal cards
+        for i, royal in enumerate(self.desk.royals):
+            if royal is not None:
+                element_type = "royal_card"
+                element_id = f"royal_card_{i}"
+                metadata = {"index": i, "card": royal}
+                
+                state = self.element_state_manager.get_element_state(
+                    element_type, metadata, self.current_state,
+                    self.selection_manager, self.desk.current_player
+                )
+                element_states[(element_type, element_id)] = state
+        
+        # Collect reserved cards (for current player)
+        for i, reserved_card in enumerate(self.desk.current_player.reserved):
+            if reserved_card is not None:
+                element_type = "reserved_card"
+                element_id = f"reserved_card_{i}"
+                metadata = {"index": i, "card": reserved_card}
+                
+                state = self.element_state_manager.get_element_state(
+                    element_type, metadata, self.current_state,
+                    self.selection_manager, self.desk.current_player
+                )
+                element_states[(element_type, element_id)] = state
+        
+        # Collect privileges
+        for i in range(self.desk.privileges):
+            element_type = "privilege"
+            element_id = f"privilege_{i}"
+            metadata = {"index": i}
+            
+            state = self.element_state_manager.get_element_state(
+                element_type, metadata, self.current_state,
+                self.selection_manager, self.desk.current_player
+            )
+            element_states[(element_type, element_id)] = state
+        
+        # Collect bag
+        element_type = "bag"
+        element_id = "bag_0"
+        metadata = {"desk": self.desk}
+        
+        state = self.element_state_manager.get_element_state(
+            element_type, metadata, self.current_state,
+            self.selection_manager, self.desk.current_player
+        )
+        element_states[(element_type, element_id)] = state
+        
+        return element_states
 
     def _interpret_click(self, pos: Tuple[int, int]) -> Optional[Action]:
         """
@@ -84,14 +197,68 @@ class GameController:
             self.dialogue = f"Click at {pos} - no element found"
             return None
         
-        self.dialogue = f"Clicked {element.element_type}: {element.name}"
+        # Phase 1: Handle debug mode selection
+        if self.debug_mode:
+            return self._handle_debug_click(element)
         
-        # Handle action panel button clicks
+        # Original logic for action buttons
         if element.element_type == "action_button":
             button: ActionButton = element.metadata["button"]
             return self._handle_action_button_click(button)
         
         return None
+
+    def _handle_debug_click(self, element) -> Optional[Action]:
+        """Handle clicks in debug mode - allows selecting any element except action buttons."""
+        
+        # Don't allow action button selection in debug mode
+        if element.element_type == "action_button":
+            self.dialogue = f"Action buttons not selectable in debug mode"
+            return None
+            
+        # Get element state to see if it's selectable
+        element_state = self.element_state_manager.get_element_state(
+            element.element_type,
+            element.metadata,
+            self.current_state,
+            self.selection_manager,
+            self.desk.current_player
+        )
+        
+        if not element_state.clickable:
+            self.dialogue = f"Element {element.element_type} not clickable"
+            return None
+            
+        # Try to toggle selection
+        selection_type, position = self.element_state_manager._get_selection_info(
+            element.element_type, 
+            element.metadata
+        )
+        
+        if selection_type:
+            was_selected = self.selection_manager.toggle_selection(
+                selection_type, 
+                position, 
+                element.metadata
+            )
+            
+            action_word = "Selected" if was_selected else "Deselected"
+            self.dialogue = f"{action_word} {element.element_type} at {position}"
+            
+            # Update dialogue with debug info
+            self._update_debug_dialogue()
+        else:
+            self.dialogue = f"Unknown element type: {element.element_type}"
+            
+        return None  # Debug mode doesn't return actions, just manages selections
+
+    def _update_debug_dialogue(self):
+        """Update dialogue with current selection information."""
+        last_selected = self.selection_manager.get_last_selected_summary()
+        current_selection = self.selection_manager.get_debug_summary()
+        
+        # Format as two lines for display
+        self.dialogue = f"Last: {last_selected}\nCurrent: {current_selection}"
 
     def _handle_action_button_click(self, button: ActionButton) -> Optional[Action]:
         """Handle clicks on action panel buttons and manage state transitions."""
@@ -360,7 +527,7 @@ if __name__ == '__main__':
     # ctrl.desk.players[0].bonuses['blue'] = 1
     # ctrl.desk.players[0].bonuses['white'] = 1   
     
-    # ctrl.desk.players[0].reserved.append(ctrl.desk.pyramid.decks.get(1).draw())  # reserve a card for testing
+    ctrl.desk.players[0].reserved.append(ctrl.desk.pyramid.decks.get(1).draw())  # reserve a card for testing
     # ctrl.desk.board.grid[0][0] = Token('black')
     # ctrl.desk.board.grid[1][1] = Token('red')
     # ctrl.desk.board.grid[2][2] = Token('green')

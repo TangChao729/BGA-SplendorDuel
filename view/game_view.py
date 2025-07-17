@@ -5,6 +5,7 @@ from view.layout import HSplit, VSplit, Margin, layout_registry
 from model.desk import Desk
 from view.assets import AssetManager
 from model.actions import CurrentAction, ActionButton
+from controller.element_state_manager import ElementState, ElementVisualState
 
 # Layout constants
 SCREEN_WIDTH = 1900
@@ -27,6 +28,10 @@ WHITE = (255, 255, 255)  # Semi-transparent white for backgrounds
 BLACK = (0, 0, 0)
 GRAY = (200,200,200)
 RED = (255, 0, 0)
+# Highlighting colors
+HIGHLIGHT_COLOR = (255, 255, 0)  # Bright yellow for highlighting
+SELECTION_COLOR = (0, 255, 0)   # Bright green for selected elements
+HIGHLIGHT_ALPHA = 100            # Semi-transparent overlay
 
 
 def to_rect(rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> pygame.Rect:
@@ -80,12 +85,21 @@ class GameView:
             [("player1", 1), ("player2", 1)],
         )
 
-    def render(self, desk: Desk, dialogue: str, current_action: CurrentAction) -> None:
+    def render(self, desk: Desk, dialogue: str, current_action: CurrentAction, element_states: Optional[Dict[Tuple[str, str], ElementState]] = None) -> None:
         """
         Render the entire game view, including background, main panel, and player panels.
+        
+        Args:
+            desk: Game desk containing all game state
+            dialogue: Current dialogue text to display
+            current_action: Current action context
+            element_states: Optional mapping of (element_type, element_id) to ElementState for highlighting
         """
         # Clear the layout registry at the start of each frame
         layout_registry.clear()
+        
+        # Store element states for use in drawing methods
+        self.element_states = element_states or {}
         
         self.draw_background()
         self.draw_main_panel(desk, dialogue, self.view_split.children["main"])
@@ -134,6 +148,28 @@ class GameView:
             self.assets.background, (SCREEN_WIDTH, SCREEN_HEIGHT)
         )
         self.screen.blit(bg, (0, 0))
+        
+    def _get_element_state(self, element_type: str, element_id: str) -> Optional[ElementState]:
+        """Get the visual state for a specific element."""
+        return self.element_states.get((element_type, element_id))
+        
+    def _draw_highlight_border(self, rect: pygame.Rect, visual_state: ElementVisualState, width: int = 3) -> None:
+        """Draw a highlight border around an element based on its visual state."""
+        if visual_state == ElementVisualState.SELECTED:
+            pygame.draw.rect(self.screen, SELECTION_COLOR, rect, width=width)
+        elif visual_state == ElementVisualState.HIGHLIGHTED:
+            pygame.draw.rect(self.screen, HIGHLIGHT_COLOR, rect, width=width)
+            
+    def _draw_selection_overlay(self, rect: pygame.Rect, visual_state: ElementVisualState) -> None:
+        """Draw a semi-transparent overlay for selected elements."""
+        if visual_state == ElementVisualState.SELECTED:
+            overlay = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+            overlay.fill((*SELECTION_COLOR, HIGHLIGHT_ALPHA))
+            self.screen.blit(overlay, (rect.x, rect.y))
+        elif visual_state == ElementVisualState.HIGHLIGHTED:
+            overlay = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+            overlay.fill((*HIGHLIGHT_COLOR, HIGHLIGHT_ALPHA))
+            self.screen.blit(overlay, (rect.x, rect.y))
 
     def draw_player_panel(self, player: Any, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
         """
@@ -399,9 +435,17 @@ class GameView:
             )
             self.screen.blit(scaled_card, (x, y))
             
+            # Check for highlighting on reserved cards
+            element_id = f"reserved_card_{i}"
+            element_state = self._get_element_state("reserved_card", element_id)
+            if element_state:
+                # Draw highlight overlay and border
+                self._draw_selection_overlay(to_rect(card_rect), element_state.visual_state)
+                self._draw_highlight_border(to_rect(card_rect), element_state.visual_state)
+            
             # Register the reserved card for click detection
             layout_registry.register(
-                f"reserved_card_{i}",
+                element_id,
                 card_rect,
                 "reserved_card",
                 {"index": i, "card": card}
@@ -493,6 +537,14 @@ class GameView:
         txt = self.font.render(f"Tokens in bag: {sum(desk.bag.counts().values())}", True, BLACK)
         self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, rect.y + rect.height - text_height))
 
+        # Check for highlighting on bag
+        element_id = "bag_0"
+        element_state = self._get_element_state("bag", element_id)
+        if element_state:
+            # Draw highlight overlay and border
+            self._draw_selection_overlay(to_rect(rect), element_state.visual_state)
+            self._draw_highlight_border(to_rect(rect), element_state.visual_state)
+
         # Register the bag for click detection
         layout_registry.register(
             "bag",
@@ -517,9 +569,17 @@ class GameView:
                 )
                 self.screen.blit(scaled_privilege, (x, y))
                 
+                # Check for highlighting on privileges
+                element_id = f"privilege_{i}"
+                element_state = self._get_element_state("privilege", element_id)
+                if element_state:
+                    # Draw highlight overlay and border
+                    self._draw_selection_overlay(to_rect(sub_rect), element_state.visual_state)
+                    self._draw_highlight_border(to_rect(sub_rect), element_state.visual_state)
+                
                 # Register privilege for click detection
                 layout_registry.register(
-                    f"privilege_{i}",
+                    element_id,
                     sub_rect,
                     "privilege",
                     {"index": i}
@@ -542,22 +602,43 @@ class GameView:
                 )
                 self.screen.blit(scaled_royal, (x, y))
                 
+                # Check for highlighting on royal cards
+                element_id = f"royal_card_{i}"
+                element_state = self._get_element_state("royal_card", element_id)
+                if element_state:
+                    # Draw highlight overlay and border
+                    self._draw_selection_overlay(to_rect(sub_rect), element_state.visual_state)
+                    self._draw_highlight_border(to_rect(sub_rect), element_state.visual_state)
+                
                 # Register royal card for click detection
                 layout_registry.register(
                     f"royal_{i}",
                     sub_rect,
-                    "royal",
+                    "royal_card",
                     {"index": i, "card": desk.royals[i]}
                 )
 
     def _draw_dialogue_panel(self, text: str, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
         """
-        Draw the dialogue panel with the given text.
+        Draw the dialogue panel with the given text. Supports multi-line text by splitting on newlines.
         """
         rect = to_rect(rect)
         pygame.draw.rect(self.screen, BLACK, rect, BORDER_WIDTH)
-        txt = self.font.render(text, True, BLACK)
-        self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, rect.y + MARGIN_MEDIUM))
+        
+        # Split text into lines and render each line
+        lines = text.split('\n')
+        line_height = self.font.get_height() + 2  # Small gap between lines
+        
+        for i, line in enumerate(lines):
+            if line.strip():  # Only render non-empty lines
+                txt = self.font.render(line, True, BLACK)
+                y_pos = rect.y + MARGIN_MEDIUM + (i * line_height)
+                
+                # Make sure we don't render outside the rect
+                if y_pos + line_height > rect.bottom:
+                    break
+                    
+                self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, y_pos))
 
     def _draw_board(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
         """
@@ -589,9 +670,17 @@ class GameView:
                     scaled_token, (tx, ty) = self._scale_image_to_fit(token_img, margin_rect, margin=0)
                     self.screen.blit(scaled_token, (tx, ty))
                     
+                    # Check for highlighting
+                    element_id = f"token_{row_idx}_{col_idx}"
+                    element_state = self._get_element_state("token", element_id)
+                    if element_state:
+                        # Draw highlight overlay and border
+                        self._draw_selection_overlay(to_rect(margin_rect), element_state.visual_state)
+                        self._draw_highlight_border(to_rect(margin_rect), element_state.visual_state)
+                    
                     # Register token for click detection
                     layout_registry.register(
-                        f"token_{row_idx}_{col_idx}",
+                        element_id,
                         margin_rect,
                         "token",
                         {"row": row_idx, "col": col_idx, "color": token.color, "token": token}
@@ -623,6 +712,23 @@ class GameView:
             )
             self.screen.blit(scaled_card, (x, y))
             scaled_card_width = scaled_card.get_width()
+            
+            # Check for highlighting on face-down cards
+            element_id = f"pyramid_card_{3-i}_{-1}"  # -1 indicates face-down
+            element_rect = (x, y, scaled_card.get_width(), scaled_card.get_height())
+            element_state = self._get_element_state("pyramid_card", element_id)
+            if element_state:
+                # Draw highlight overlay and border
+                self._draw_selection_overlay(to_rect(element_rect), element_state.visual_state)
+                self._draw_highlight_border(to_rect(element_rect), element_state.visual_state)
+            
+            # Register face-down pyramid card for click detection
+            layout_registry.register(
+                f"pyramid_card_back_{3-i}",
+                element_rect,
+                "pyramid_card_back",
+                {"level": 3-i, "deck_type": "face_down"}
+            )
         # Layout for face-up cards
         def layout_face_up(level: int, count: int, y_rect: Any) -> dict:
             total_occupied_width = count * scaled_card_width + (count - 1) * MARGIN_SMALL * 2
@@ -647,12 +753,21 @@ class GameView:
             )
             self.screen.blit(scaled_card, (x, y))
             
+            # Check for highlighting on face-up level 1 cards
+            element_id = f"pyramid_card_1_{i+1}"
+            element_rect = (x, y, scaled_card_width, h)
+            element_state = self._get_element_state("pyramid_card", element_id)
+            if element_state:
+                # Draw highlight overlay and border
+                self._draw_selection_overlay(to_rect(element_rect), element_state.visual_state)
+                self._draw_highlight_border(to_rect(element_rect), element_state.visual_state)
+            
             # Register pyramid card for click detection
             card = desk.pyramid.slots[1][i] if i < len(desk.pyramid.slots[1]) else None
             if card:
                 layout_registry.register(
-                    f"pyramid_card_1_{i+1}",
-                    (x, y, scaled_card_width, h),
+                    element_id,
+                    element_rect,
                     "pyramid_card",
                     {"level": 1, "index": i+1, "card": card}
                 )
@@ -667,12 +782,21 @@ class GameView:
             )
             self.screen.blit(scaled_card, (x, y))
             
+            # Check for highlighting on face-up level 2 cards
+            element_id = f"pyramid_card_2_{i+1}"
+            element_rect = (x, y, scaled_card_width, h)
+            element_state = self._get_element_state("pyramid_card", element_id)
+            if element_state:
+                # Draw highlight overlay and border
+                self._draw_selection_overlay(to_rect(element_rect), element_state.visual_state)
+                self._draw_highlight_border(to_rect(element_rect), element_state.visual_state)
+            
             # Register pyramid card for click detection
             card = desk.pyramid.slots[2][i] if i < len(desk.pyramid.slots[2]) else None
             if card:
                 layout_registry.register(
-                    f"pyramid_card_2_{i+1}",
-                    (x, y, scaled_card_width, h),
+                    element_id,
+                    element_rect,
                     "pyramid_card",
                     {"level": 2, "index": i+1, "card": card}
                 )
@@ -687,12 +811,21 @@ class GameView:
             )
             self.screen.blit(scaled_card, (x, y))
             
+            # Check for highlighting on face-up level 3 cards
+            element_id = f"pyramid_card_3_{i+1}"
+            element_rect = (x, y, scaled_card_width, h)
+            element_state = self._get_element_state("pyramid_card", element_id)
+            if element_state:
+                # Draw highlight overlay and border
+                self._draw_selection_overlay(to_rect(element_rect), element_state.visual_state)
+                self._draw_highlight_border(to_rect(element_rect), element_state.visual_state)
+            
             # Register pyramid card for click detection
             card = desk.pyramid.slots[3][i] if i < len(desk.pyramid.slots[3]) else None
             if card:
                 layout_registry.register(
-                    f"pyramid_card_3_{i+1}",
-                    (x, y, scaled_card_width, h),
+                    element_id,
+                    element_rect,
                     "pyramid_card",
                     {"level": 3, "index": i+1, "card": card}
                 )
