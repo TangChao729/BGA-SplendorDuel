@@ -38,8 +38,20 @@ def test_create_card_from_dict():
     assert c.ability is None
     assert c.crowns == 0
     assert c.cost == data["cost"]
-    # Round-trip to dict
-    assert c.to_dict() == data
+    # Test interactive properties defaults
+    assert c.selected == False
+    assert c.clickable == True
+    # Round-trip to dict - should include interactive properties
+    expected_data = data.copy()
+    expected_data["selected"] = False
+    expected_data["clickable"] = True
+    assert c.to_dict() == expected_data
+    
+    # Test selection functionality
+    selected_card = Card.from_dict(data)
+    selected_card.select()
+    assert "✓" in repr(selected_card)
+    assert selected_card.to_dict()["selected"] == True
 
 
 def test_deck_from_json(temp_path):

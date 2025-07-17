@@ -9,9 +9,15 @@ def test_token_repr_and_todict():
     pearl = Token("pearl")
     gold = Token("gold")
     assert "pearl" in repr(pearl) and "🟣" in repr(pearl)
-    assert pearl.to_dict() == {"color": "pearl"}
+    assert pearl.to_dict() == {"color": "pearl", "selected": False, "clickable": True}
     assert "gold" in repr(gold) and "🟡" in repr(gold)
-    assert gold.to_dict() == {"color": "gold"}
+    assert gold.to_dict() == {"color": "gold", "selected": False, "clickable": True}
+    
+    # Test selection indicator in repr
+    selected_token = Token("red")
+    selected_token.select()
+    assert "✓" in repr(selected_token)
+    assert selected_token.to_dict() == {"color": "red", "selected": True, "clickable": True}
 
 
 def test_bag_basic_draw_return_counts_repr(tmp_path):

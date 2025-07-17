@@ -1,6 +1,7 @@
 import json
 import random
 from typing import Dict, List, Optional, Tuple, Any
+from model.interactive_element import InteractiveElement
 random.seed(42)  # For reproducibility in tests
 
 
@@ -18,22 +19,40 @@ def _symbol(color: str) -> str:
     return symbol_map.get(color, color)
 
 
-class Token:
+class Token(InteractiveElement):
     """
     Represents a single token unit in Splendor Duel.
 
     Attributes:
         color (str): One of "black", "red", "green", "blue", "white", "pearl", or "gold".
+        selected (bool): Whether this token is currently selected (inherited)
+        clickable (bool): Whether this token can be clicked (inherited)
     """
 
-    def __init__(self, color: str):
+    def __init__(self, color: str, selected: bool = False, clickable: bool = True):
+        super().__init__(selected=selected, clickable=clickable)
         self.color = color
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"color": self.color}
+        return {
+            "color": self.color,
+            "selected": self.selected,
+            "clickable": self.clickable
+        }
 
     def __repr__(self) -> str:
-        return f"<Token {self.color}:{_symbol(self.color)}>"
+        selection_indicator = "✓" if self.selected else ""
+        return f"<Token {self.color}:{_symbol(self.color)}{selection_indicator}>"
+    
+    def __eq__(self, other) -> bool:
+        """Tokens are equal if they have the same color."""
+        if not isinstance(other, Token):
+            return False
+        return self.color == other.color
+    
+    def __hash__(self) -> int:
+        """Hash based on color only (immutable property) so Token can be used as dict key."""
+        return hash(self.color)
 
 
 class Bag:

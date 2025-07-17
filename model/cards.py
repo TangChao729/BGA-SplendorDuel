@@ -2,11 +2,12 @@ import json
 import random
 from typing import Any, Dict, List, Optional
 from model.tokens import Token
+from model.interactive_element import InteractiveElement
 
 random.seed(42)  # For reproducibility in tests
 
 
-class Card:
+class Card(InteractiveElement):
     """
     Represents a single Jewel card in Splendor Duel.
 
@@ -19,6 +20,8 @@ class Card:
         ability (Optional[str]): One of the special abilities ("Turn", "steal", etc.) or None.
         crowns (int): Number of crowns on the card.
         cost (Dict[Token, int]): Token cost mapping (e.g. {"black": 1, "red": 2, ...}).
+        selected (bool): Whether this card is currently selected (inherited)
+        clickable (bool): Whether this card can be clicked (inherited)
     """
 
     def __init__(
@@ -31,7 +34,10 @@ class Card:
         ability: Optional[str],
         crowns: int,
         cost: Dict[Token, int],
+        selected: bool = False,
+        clickable: bool = True,
     ):
+        super().__init__(selected=selected, clickable=clickable)
         self.id = id
         self.level = level
         self.color = color
@@ -55,6 +61,8 @@ class Card:
             ability=data.get("ability"),
             crowns=int(data.get("crowns", 0)),
             cost={t: int(v) for t, v in data.get("cost", {}).items()},
+            selected=data.get("selected", False),
+            clickable=data.get("clickable", True),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -70,13 +78,26 @@ class Card:
             "ability": self.ability,
             "crowns": self.crowns,
             "cost": dict(self.cost),
+            "selected": self.selected,
+            "clickable": self.clickable,
         }
 
     def __repr__(self) -> str:
+        selection_indicator = "✓" if self.selected else ""
         return (
             f"<Card id={self.id!r} level={self.level} color={self.color!r} "
-            f"points={self.points} bonus={self.bonus} crowns={self.crowns}>"
+            f"points={self.points} bonus={self.bonus} crowns={self.crowns}{selection_indicator}>"
         )
+    
+    def __eq__(self, other) -> bool:
+        """Cards are equal if they have the same id."""
+        if not isinstance(other, Card):
+            return False
+        return self.id == other.id
+    
+    def __hash__(self) -> int:
+        """Hash based on id only (immutable property) so Card can be used as dict key."""
+        return hash(self.id)
 
 
 class Deck:
