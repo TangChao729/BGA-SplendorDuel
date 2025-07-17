@@ -88,6 +88,11 @@ class ActionButton:
     text: str
     action: str
     enabled: bool = True
+    
+    def __post_init__(self):
+        """Validate action button attributes."""
+        if not isinstance(self.enabled, bool):
+            self.enabled = bool(self.enabled)
 
 
 @dataclass

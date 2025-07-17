@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional
+import json
+from typing import Dict, List, Optional, Any
 
 from model.cards import Card
 from model.tokens import Token
@@ -161,3 +162,75 @@ class PlayerState:
         Get the total number of tokens the player has
         """
         return sum(self.tokens.values())
+
+    def to_json(self) -> Dict[str, Any]:
+        """
+        Serialize the player state to a JSON-compatible dictionary.
+        
+        Returns:
+            Dict[str, Any]: JSON-serializable representation of the player state.
+        """
+        return {
+            "name": self.name,
+            "tokens": self.tokens.copy(),
+            "bonuses": self.bonuses.copy(),
+            "reserved": [card.to_dict() for card in self.reserved],
+            "purchased": [card.to_dict() for card in self.purchased],
+            "privileges": self.privileges,
+            "crowns": self.crowns,
+            "points": self.points,
+            "card_points": self.card_points.copy()
+        }
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> "PlayerState":
+        """
+        Create a PlayerState instance from a JSON-compatible dictionary.
+        
+        Args:
+            data (Dict[str, Any]): Dictionary containing player state data.
+            
+        Returns:
+            PlayerState: Reconstructed player state.
+        """
+        player = cls()
+        
+        # Set basic attributes
+        player.name = data.get("name", "Player")
+        player.tokens = data.get("tokens", {c: 0 for c in ["black", "red", "green", "blue", "white", "pearl", "gold"]})
+        player.bonuses = data.get("bonuses", {c: 0 for c in ["black", "red", "green", "blue", "white"]})
+        player.privileges = data.get("privileges", 0)
+        player.crowns = data.get("crowns", 0)
+        player.points = data.get("points", 0)
+        player.card_points = data.get("card_points", {c: 0 for c in ["black", "red", "green", "blue", "white"]})
+        
+        # Reconstruct card lists
+        player.reserved = [Card.from_dict(card_data) for card_data in data.get("reserved", [])]
+        player.purchased = [Card.from_dict(card_data) for card_data in data.get("purchased", [])]
+        
+        return player
+
+    def save_to_file(self, filename: str) -> None:
+        """
+        Save the player state to a JSON file.
+        
+        Args:
+            filename (str): Path to the output JSON file.
+        """
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(self.to_json(), f, indent=2, ensure_ascii=False)
+
+    @classmethod
+    def load_from_file(cls, filename: str) -> "PlayerState":
+        """
+        Load a player state from a JSON file.
+        
+        Args:
+            filename (str): Path to the JSON file.
+            
+        Returns:
+            PlayerState: Loaded player state.
+        """
+        with open(filename, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return cls.from_json(data)

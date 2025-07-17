@@ -39,12 +39,12 @@ class GameController:
         self.current_state: GameState = GameState.START_OF_ROUND
         self.pending_action_button: Optional[ActionButton] = None
         self.info_message: str = ""
-        self.current_action: CurrentAction = self.desk.get_current_action(state=self.current_state)
         self.pending_action: Optional[Action] = None
 
     def run(self):
         """Main Pygame loop: handle events, update model, render view."""
         # print(self.desk.board.eligible_draws())
+        self.current_action: CurrentAction = self.desk.get_current_action(state=self.current_state)
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -54,6 +54,7 @@ class GameController:
                         self.running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     action = self._interpret_click(event.pos)
+                    print(f"Current player: {self.desk.current_player.name}")
                     if action:
                         try:
                             self.desk.apply_action(action)
@@ -343,25 +344,26 @@ if __name__ == '__main__':
     )
 
     # add artificial player data for testing
+    ctrl.desk.board.fill_grid(ctrl.desk.bag.draw())
     ctrl.desk.players[0].privileges = 3
-    ctrl.desk.players[0].tokens['black'] = 2
-    ctrl.desk.players[0].tokens['red'] = 1
-    ctrl.desk.players[0].tokens['green'] = 1
-    ctrl.desk.players[0].tokens['blue'] = 1
-    ctrl.desk.players[0].tokens['white'] = 1
-    ctrl.desk.players[0].tokens['pearl'] = 1
-    ctrl.desk.players[0].tokens['gold'] = 1
+    # ctrl.desk.players[0].tokens['black'] = 2
+    # ctrl.desk.players[0].tokens['red'] = 1
+    # ctrl.desk.players[0].tokens['green'] = 1
+    # ctrl.desk.players[0].tokens['blue'] = 1
+    # ctrl.desk.players[0].tokens['white'] = 1
+    # ctrl.desk.players[0].tokens['pearl'] = 1
+    # ctrl.desk.players[0].tokens['gold'] = 1
     
-    ctrl.desk.players[0].bonuses['black'] = 1
-    ctrl.desk.players[0].bonuses['red'] = 1
-    ctrl.desk.players[0].bonuses['green'] = 1
-    ctrl.desk.players[0].bonuses['blue'] = 1
-    ctrl.desk.players[0].bonuses['white'] = 1   
+    # ctrl.desk.players[0].bonuses['black'] = 1
+    # ctrl.desk.players[0].bonuses['red'] = 1
+    # ctrl.desk.players[0].bonuses['green'] = 1
+    # ctrl.desk.players[0].bonuses['blue'] = 1
+    # ctrl.desk.players[0].bonuses['white'] = 1   
     
-    ctrl.desk.players[0].reserved.append(ctrl.desk.pyramid.decks.get(1).draw())  # reserve a card for testing
-    ctrl.desk.board.grid[0][0] = Token('black')
-    ctrl.desk.board.grid[1][1] = Token('red')
-    ctrl.desk.board.grid[2][2] = Token('green')
-    ctrl.desk.board.grid[3][3] = Token('blue')
-    ctrl.desk.board.grid[4][4] = Token('white')
+    # ctrl.desk.players[0].reserved.append(ctrl.desk.pyramid.decks.get(1).draw())  # reserve a card for testing
+    # ctrl.desk.board.grid[0][0] = Token('black')
+    # ctrl.desk.board.grid[1][1] = Token('red')
+    # ctrl.desk.board.grid[2][2] = Token('green')
+    # ctrl.desk.board.grid[3][3] = Token('blue')
+    # ctrl.desk.board.grid[4][4] = Token('white')
     ctrl.run()

@@ -121,3 +121,83 @@ def test_has_won_conditions():
     # Negative case
     p = PlayerState()
     assert not p.has_won()
+
+
+def test_json_serialization():
+    """Test JSON serialization and deserialization of PlayerState."""
+    # Create a player with various data
+    p = PlayerState()
+    p.name = "Test Player"
+    p.tokens["black"] = 3
+    p.tokens["gold"] = 2
+    p.bonuses["red"] = 1
+    p.privileges = 2
+    p.points = 15
+    p.crowns = 3
+    
+    # Add some cards
+    card1 = make_card(id="test-1", color="Red", points=5, crowns=1)
+    card2 = make_card(id="test-2", color="Blue", points=3)
+    p.purchased.append(card1)
+    p.reserved.append(card2)
+    
+    # Serialize to JSON
+    json_data = p.to_json()
+    assert isinstance(json_data, dict)
+    assert json_data["name"] == "Test Player"
+    assert json_data["tokens"]["black"] == 3
+    assert json_data["bonuses"]["red"] == 1
+    assert json_data["privileges"] == 2
+    assert len(json_data["purchased"]) == 1
+    assert len(json_data["reserved"]) == 1
+    
+    # Deserialize from JSON
+    p2 = PlayerState.from_json(json_data)
+    assert p2.name == p.name
+    assert p2.tokens == p.tokens
+    assert p2.bonuses == p.bonuses
+    assert p2.privileges == p.privileges
+    assert p2.points == p.points
+    assert p2.crowns == p.crowns
+    assert len(p2.purchased) == len(p.purchased)
+    assert len(p2.reserved) == len(p.reserved)
+    assert p2.purchased[0].id == card1.id
+    assert p2.reserved[0].id == card2.id
+
+
+def test_json_file_operations(tmp_path):
+    """Test saving and loading PlayerState to/from files."""
+    # Create a player with some data
+    p = PlayerState()
+    p.name = "File Test Player"
+    p.tokens["white"] = 5
+    p.points = 12
+    
+    # Save to file
+    test_file = tmp_path / "player_state.json"
+    p.save_to_file(str(test_file))
+    
+    # Verify file exists and contains JSON
+    assert test_file.exists()
+    
+    # Load from file
+    p2 = PlayerState.load_from_file(str(test_file))
+    assert p2.name == p.name
+    assert p2.tokens["white"] == 5
+    assert p2.points == 12
+
+
+def test_json_with_empty_player():
+    """Test JSON operations with a fresh, empty player."""
+    p = PlayerState()
+    
+    # Serialize empty player
+    json_data = p.to_json()
+    
+    # Deserialize and verify defaults
+    p2 = PlayerState.from_json(json_data)
+    assert p2.tokens["black"] == 0
+    assert len(p2.reserved) == 0
+    assert len(p2.purchased) == 0
+    assert p2.privileges == 0
+    assert p2.points == 0

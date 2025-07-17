@@ -41,7 +41,11 @@ class Desk:
         # Privileges (scrolls) pool above board
         self.privileges: int = initial_privileges
         # Two-player states
-        self.players: List[PlayerState] = [PlayerState(), PlayerState()]
+        player_1: PlayerState = PlayerState()
+        player_1.name = "Player 1"  
+        player_2: PlayerState = PlayerState()
+        player_2.name = "Player 2"
+        self.players: List[PlayerState] = [player_1, player_2]
         # Index of current player (0 or 1)
         self.current_player_index: int = 0
         # Winner index when game ends
@@ -81,7 +85,7 @@ class Desk:
             actions.append(Action(ActionType.TAKE_TOKENS, {"combo": combo}))
 
         # 2) TAKE_GOLD_AND_RESERVE: reserve any pyramid card + take one gold token
-        if self.board.counts().get("gold", 0) > 0 and player.reserved < 3:
+        if self.board.counts().get("gold", 0) > 0 and len(player.reserved) < 3:
             # for every gold token available
             for color, positions in self.board.eligible_draws().items():
                 if color == "gold":
@@ -228,6 +232,7 @@ class Desk:
                 explanation = "Select a token to take (cannot be gold):"
                 buttons = []
                 # TODO: Add token selection buttons based on available tokens
+                buttons.append(ActionButton("Confirm", "confirm"))
                 buttons.append(ActionButton("Cancel", "cancel"))
                 return CurrentAction(GameState.USE_PRIVILEGE, explanation, buttons)
                 
