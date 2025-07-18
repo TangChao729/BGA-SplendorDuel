@@ -2,6 +2,7 @@ import json
 import pytest
 from model.desk import Desk
 from model.actions import ActionType
+from model.tokens import Token
 
 def make_cards_json(path):
     # Create a minimal cards.json with exactly required counts
@@ -92,7 +93,7 @@ def test_use_privilege_and_replenish_action(setup_desk):
     desk.apply_action(replenish_actions[0])
     # After replenishing, board should have 25 black tokens
     board_counts = desk.board.counts()
-    assert board_counts.get("black", 0) == 25, "Board should have 25 black tokens after replenishing"
+    assert board_counts.get(Token("black"), 0) == 25, "Board should have 25 black tokens after replenishing"
 
     # Add a privilege to the player
     player.privileges += 1
@@ -128,23 +129,23 @@ def test_take_tokens_action(setup_desk):
     
     # Replenish board, after the board should be filled with tokens
     desk.apply_action(replenish_actions[0])
-    assert desk.board.counts() == {"black": 25}, "Board should have 25 black tokens after replenishing"
+    assert desk.board.counts() == {Token("black"): 25}, "Board should have 25 black tokens after replenishing"
 
     actions = desk.legal_actions()
     take_token_actions = [a for a in actions if a.type == ActionType.TAKE_TOKENS]
     assert take_token_actions, "After replenishing, TAKE_TOKENS actions should be available"
 
     desk.apply_action(take_token_actions[0])
-    assert desk.board.counts().get("black", 0) < 25, "Board should have less than 25 black tokens after taking tokens"
+    assert desk.board.counts().get(Token("black"), 0) < 25, "Board should have less than 25 black tokens after taking tokens"
     
     # tokens added to player
     sum_tokens = 0
-    sum_tokens += desk.players[0].tokens["black"]
-    sum_tokens += desk.players[1].tokens["black"]
+    sum_tokens += desk.players[0].tokens[Token("black")]
+    sum_tokens += desk.players[1].tokens[Token("black")]
     assert sum_tokens > 0, "Player should have black tokens after taking"
 
     # assert drawn equal to taken
-    assert desk.board.counts().get("black", 0) == 25 - sum_tokens, \
+    assert desk.board.counts().get(Token("black"), 0) == 25 - sum_tokens, \
         "Bag should have remaining black tokens after taking"
     
 

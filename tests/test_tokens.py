@@ -12,13 +12,13 @@ def test_token_repr_and_todict():
     assert pearl.to_dict() == {"color": "pearl"}
     assert "gold" in repr(gold) and "🟡" in repr(gold)
     assert gold.to_dict() == {"color": "gold"}
-    assert pearl.id == "pearl-0"
-    assert gold.id == "gold-0"
+    assert pearl.id == "pearl"
+    assert gold.id == "gold"
 
 
 def test_bag_basic_draw_return_counts_repr(tmp_path):
     # Initialize bag with known counts
-    initial = {"black": 2, "pearl": 1, "gold": 1}
+    initial = {Token("black"): 2, Token("pearl"): 1, Token("gold"): 1}
     bag = Bag(initial)
     # __repr__ contains counts and total
     rep = repr(bag)
@@ -32,9 +32,9 @@ def test_bag_basic_draw_return_counts_repr(tmp_path):
     assert len(drawn) == sum(initial.values())
     assert len(bag) == 0
     # drawn contains correct colors
-    colors = [t.color for t in drawn]
-    for color, num in initial.items():
-        assert colors.count(color) == num
+    tokens = [t for t in drawn]
+    for token, num in initial.items():
+        assert tokens.count(token) == num
     # return_tokens restores tokens
     bag.return_tokens(drawn)
     assert bag.counts() == initial
@@ -55,7 +55,7 @@ def test_board_fill_and_eligible_draws_1():
 
     # Example usage
     initial_counts = {
-        "black": 1,
+        Token("black"): 1,
         # "red": 4,
         # "blue": 4,
         # "green": 4,
@@ -74,13 +74,13 @@ def test_board_fill_and_eligible_draws_1():
 def test_board_fill_and_eligible_draws_2():
     # Example usage
     initial_counts = {
-        "black": 1,
-        "red": 1,
-        "blue": 1,
-        "green": 1,
-        "white": 1,
-        "pearl": 1,
-        "gold": 1,  # Wildcard tokens
+        Token("black"): 1,
+        Token("red"): 1,
+        Token("blue"): 1,
+        Token("green"): 1,
+        Token("white"): 1,
+        Token("pearl"): 1,
+        Token("gold"): 1,  # Wildcard tokens
     }
     bag = Bag(initial_counts)
     board = Board()
@@ -92,13 +92,13 @@ def test_board_fill_and_eligible_draws_2():
 
 def test_draw_until_empty():
     initial_counts = {
-        "black": 4,
-        "red": 4,
-        "blue": 4,
-        "green": 4,
-        "white": 4,
-        "pearl": 2,
-        "gold": 2,  # Wildcard tokens
+        Token("black"): 4,
+        Token("red"): 4,
+        Token("blue"): 4,
+        Token("green"): 4,
+        Token("white"): 4,
+        Token("pearl"): 2,
+        Token("gold"): 2,  # Wildcard tokens
     }
     bag = Bag(initial_counts)
     board = Board()
@@ -114,7 +114,7 @@ def test_draw_until_empty():
 
 
 def test_board_invalid_draw_raises():
-    initial = {"green": 1}
+    initial = {Token("green"): 1}
     bag = Bag(initial)
     board = Board()
     tokens = bag.draw()

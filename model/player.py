@@ -22,18 +22,19 @@ class PlayerState:
     def __init__(self) -> None:
         self.name: Optional[str] = "Player 21:07"
         # token colors: black, red, green, blue, white, pearl, gold (wild)
-        self.tokens: Dict[str, int] = {
-            c: 0 for c in ["black", "red", "green", "blue", "white", "pearl", "gold"]
+        self.tokens: Dict[Token, int] = {
+            Token(c): 0 for c in ["black", "red", "green", "blue", "white", "pearl", "gold"]
         }
         # bonuses from purchased cards (no wild bonus)
-        self.bonuses: Dict[str, int] = {
-            c: 0 for c in ["black", "red", "green", "blue", "white"]
+        self.bonuses: Dict[Token, int] = {
+            Token(c): 0 for c in ["black", "red", "green", "blue", "white"]
         }
         self.reserved: List[Card] = []
         self.purchased: List[Card] = []
         self.privileges: int = 0
         self.crowns: int = 0
         self.points: int = 0
+        # points from cards of same color
         self.card_points: Dict[str, int] = {
             c: 0 for c in ["black", "red", "green", "blue", "white"]
         }
@@ -44,7 +45,7 @@ class PlayerState:
         Add tokens of given colors to player's supply.
         """
         for token in list_tokens:
-            self.tokens[token.color] = self.tokens.get(token.color, 0) + 1
+            self.tokens[token] = self.tokens.get(token, 0) + 1
             
     def remove_tokens(self, spend: Dict[Token, int]) -> None:
         """
@@ -53,10 +54,10 @@ class PlayerState:
         Args:
             spend (Dict[str,int]): Map color to number of tokens to deduct.
         """
-        for color, amt in spend.items():
+        for token, amt in spend.items():
             if amt > 0:
-                assert self.tokens[color] >= amt, f"Not enough tokens of color {color}"
-                self.tokens[color] -= amt
+                assert self.tokens[token] >= amt, f"Not enough tokens of color {token}"
+                self.tokens[token] -= amt
 
     def can_afford(self, card: Card) -> bool:
         """
@@ -65,16 +66,16 @@ class PlayerState:
         Returns:
             bool: True if affordable, False otherwise.
         """
-        cost: Dict[str, int] = card.cost
+        cost: Dict[Token, int] = card.cost
         # compute shortage per color after bonuses and personal tokens
         total_short = 0
-        for color, required in cost.items():
-            bonus = self.bonuses.get(color, 0)
-            have = self.tokens.get(color, 0) + bonus
+        for token, required in cost.items():
+            bonus = self.bonuses.get(token, 0)
+            have = self.tokens.get(token, 0) + bonus
             short = max(required - have, 0)
             total_short += short
         # wild tokens (pearl) can cover shortage
-        return total_short <= self.tokens.get("gold", 0)
+        return total_short <= self.tokens.get(Token("gold"), 0)
 
     def pay_for_card(self, card: Card) -> None:
         """
@@ -82,25 +83,25 @@ class PlayerState:
         Assumes can_afford(card) is True.
         """
         cost = card.cost
-        to_remove: Dict[str, int] = {c: 0 for c in self.tokens}
+        to_remove: Dict[Token, int] = {token: 0 for token in self.tokens}
         # First use colored tokens up to cost - bonus
-        for color, required in cost.items():
-            bonus = self.bonuses.get(color, 0)
+        for token, required in cost.items():
+            bonus = self.bonuses.get(token, 0)
             needed = max(required - bonus, 0)
-            pay_color = min(self.tokens.get(color, 0), needed)
-            to_remove[color] = pay_color
+            pay_color = min(self.tokens.get(token, 0), needed)
+            to_remove[token] = pay_color
         # Compute leftover shortage to cover with wild
         shortage = sum(
             max(card.cost[c] - (self.bonuses.get(c, 0) + to_remove.get(c, 0)), 0)
             for c in cost
         )
-        to_remove["gold"] = shortage
+        to_remove[Token("gold")] = shortage
         # Remove tokens
         self.remove_tokens(to_remove)
         # Acquire card
         self.purchased.append(card)
         # Update bonuses, points, crowns
-        self.bonuses[card.color] = self.bonuses.get(card.color, 0) + 1
+        self.bonuses[Token(card.color)] = self.bonuses.get(Token(card.color), 0) + 1
         self.points += card.points
         self.crowns += card.crowns
 
@@ -172,8 +173,8 @@ class PlayerState:
         """
         return {
             "name": self.name,
-            "tokens": self.tokens.copy(),
-            "bonuses": self.bonuses.copy(),
+            "tokens": {token.color: count for token, count in self.tokens.items()},
+            "bonuses": {token.color: count for token, count in self.bonuses.items()},
             "reserved": [card.to_dict() for card in self.reserved],
             "purchased": [card.to_dict() for card in self.purchased],
             "privileges": self.privileges,
@@ -197,8 +198,8 @@ class PlayerState:
         
         # Set basic attributes
         player.name = data.get("name", "Player")
-        player.tokens = data.get("tokens", {c: 0 for c in ["black", "red", "green", "blue", "white", "pearl", "gold"]})
-        player.bonuses = data.get("bonuses", {c: 0 for c in ["black", "red", "green", "blue", "white"]})
+        player.tokens = {Token(c): data.get("tokens", {c: 0 for c in ["black", "red", "green", "blue", "white", "pearl", "gold"]})[c] for c in ["black", "red", "green", "blue", "white", "pearl", "gold"]}
+        player.bonuses = {Token(c): data.get("bonuses", {c: 0 for c in ["black", "red", "green", "blue", "white"]})[c] for c in ["black", "red", "green", "blue", "white"]}
         player.privileges = data.get("privileges", 0)
         player.crowns = data.get("crowns", 0)
         player.points = data.get("points", 0)

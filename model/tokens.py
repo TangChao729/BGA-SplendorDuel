@@ -17,17 +17,6 @@ def _symbol(color: str) -> str:
     }
     return symbol_map.get(color, color)
 
-def _id_tracker(color: str) -> str:
-    full_ids = {
-        "black": [f"black-{i}" for i in range(4, -1, -1)],
-        "red": [f"red-{i}" for i in range(4, -1, -1)],
-        "green": [f"green-{i}" for i in range(4, -1, -1)],
-        "blue": [f"blue-{i}" for i in range(4, -1, -1)],
-        "white": [f"white-{i}" for i in range(4, -1, -1)],
-        "pearl": [f"pearl-{i}" for i in range(2, -1, -1)],
-        "gold": [f"gold-{i}" for i in range(3, -1, -1)],
-    }
-    return full_ids[color].pop()
 
 class Token(Piece):
     """
@@ -38,7 +27,7 @@ class Token(Piece):
     """
 
     def __init__(self, color: str):
-        super().__init__(_id_tracker(color))
+        super().__init__(color)
         self.color = color
 
     def to_dict(self) -> Dict[str, Any]:
@@ -59,16 +48,16 @@ class Bag(Piece):
         - counts(): current counts of tokens.
     """
 
-    def __init__(self, initial_counts: Dict[str, int]):
+    def __init__(self, initial_counts: Dict[Token, int]):
         """
         Args:
             initial_counts: map from token color to starting count.
         """
         super().__init__("bag")
         self._tokens: List[Token] = []
-        for color, count in initial_counts.items():
+        for token, count in initial_counts.items():
             for _ in range(count):
-                self._tokens.append(Token(color))
+                self._tokens.append(token)
 
     @classmethod
     def from_json(cls, path: str) -> "Bag":
@@ -100,13 +89,13 @@ class Bag(Piece):
         """
         self._tokens.extend(tokens)
 
-    def counts(self) -> Dict[str, int]:
+    def counts(self) -> Dict[Token, int]:
         """
         Current counts of tokens by color.
         """
-        ctr: Dict[str, int] = {}
+        ctr: Dict[Token, int] = {}
         for t in self._tokens:
-            ctr[t.color] = ctr.get(t.color, 0) + 1
+            ctr[t] = ctr.get(t, 0) + 1
         return ctr
 
     def is_empty(self) -> bool:
@@ -255,15 +244,15 @@ class Board(Piece):
     def to_dict(self) -> List[List[Optional[Dict[str,Any]]]]:
         return [[t.to_dict() if t else None for t in row] for row in self.grid]
 
-    def counts(self) -> Dict[str, int]:
+    def counts(self) -> Dict[Token, int]:
         """
         Count tokens currently on board.
         """
-        ctr: Dict[str,int] = {}
+        ctr: Dict[Token,int] = {}
         for row in self.grid:
             for t in row:
                 if t:
-                    ctr[t.color] = ctr.get(t.color, 0) + 1
+                    ctr[t] = ctr.get(t, 0) + 1
         return ctr
 
     def __repr__(self) -> str:
@@ -275,12 +264,12 @@ class Board(Piece):
 if __name__ == "__main__":
     # Example usage
     initial_counts = {
-        "black": 1,
-        "red": 1,
-        "blue": 1,
-        "green": 1,
-        "white": 1,
-        "pearl": 1,
+        Token("black"): 1,
+        Token("red"): 1,
+        Token("blue"): 1,
+        Token("green"): 1,
+        Token("white"): 1,
+        Token("pearl"): 1,
         # "gold": 1,  # Wildcard tokens
     }
     bag = Bag(initial_counts)

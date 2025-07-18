@@ -32,55 +32,55 @@ def test_token_management():
     p = PlayerState()
     # Add tokens
     p.add_tokens([Token("black"), Token("black"), Token("gold")])
-    assert p.tokens.get("black") == 2
-    assert p.tokens.get("gold") == 1
+    assert p.tokens.get(Token("black")) == 2
+    assert p.tokens.get(Token("gold")) == 1
     # Remove tokens
-    p.remove_tokens({"black": 1, "gold": 1})
-    assert p.tokens.get("black") == 1
-    assert p.tokens.get("gold") == 0
+    p.remove_tokens({Token("black"): 1, Token("gold"): 1})
+    assert p.tokens.get(Token("black")) == 1
+    assert p.tokens.get(Token("gold")) == 0
     # Removing too many should assert
     with pytest.raises(AssertionError):
-        p.remove_tokens({"black": 5})
+        p.remove_tokens({Token("black"): 5})
 
 
 def test_can_afford_with_bonus_and_gold():
     p = PlayerState()
     # Setup tokens and bonuses
-    p.tokens["red"] = 1
-    p.bonuses["red"] = 1  # cover cost partially
-    p.tokens["gold"] = 1  # wild to cover shortage
+    p.tokens[Token("red")] = 1
+    p.bonuses[Token("red")] = 1  # cover cost partially
+    p.tokens[Token("gold")] = 1  # wild to cover shortage
     # Card costs 3 red
     card = make_card(
-        cost={"red": 3, "black": 0, "green": 0, "blue": 0, "white": 0, "pearl": 0}
+        cost={Token("red"): 3, Token("black"): 0, Token("green"): 0, Token("blue"): 0, Token("white"): 0, Token("pearl"): 0}
     )
     assert p.can_afford(card)
     # If wild insufficient
-    p.tokens["gold"] = 0
+    p.tokens[Token("gold")] = 0
     assert not p.can_afford(card)
 
 
 def test_pay_for_card_and_effects():
     p = PlayerState()
     # Give tokens
-    p.tokens["white"] = 2
-    p.tokens["gold"] = 1
+    p.tokens[Token("white")] = 2
+    p.tokens[Token("gold")] = 1
     # Card: color white, cost white 2, points 3, crowns 1
     card = make_card(
         id="1",
         color="white",
         points=3,
         crowns=1,
-        cost={"white": 2, "black": 0, "red": 0, "green": 0, "blue": 0, "pearl": 0},
+        cost={Token("white"): 2, Token("black"): 0, Token("red"): 0, Token("green"): 0, Token("blue"): 0, Token("pearl"): 0},
     )
     assert p.can_afford(card)
     p.pay_for_card(card)
     # Check tokens used
-    assert p.tokens["white"] == 0
-    assert p.tokens["gold"] == 1  # no wild used
+    assert p.tokens[Token("white")] == 0
+    assert p.tokens[Token("gold")] == 1  # no wild used
     # Check purchased
     assert card in p.purchased
     # Bonus incremented
-    assert p.bonuses["white"] == 1
+    assert p.bonuses[Token("white")] == 1
     # Points and crowns updated
     assert p.points == 3
     assert p.crowns == 1
@@ -128,9 +128,9 @@ def test_json_serialization():
     # Create a player with various data
     p = PlayerState()
     p.name = "Test Player"
-    p.tokens["black"] = 3
-    p.tokens["gold"] = 2
-    p.bonuses["red"] = 1
+    p.tokens[Token("black")] = 3
+    p.tokens[Token("gold")] = 2
+    p.bonuses[Token("red")] = 1
     p.privileges = 2
     p.points = 15
     p.crowns = 3
@@ -170,7 +170,7 @@ def test_json_file_operations(tmp_path):
     # Create a player with some data
     p = PlayerState()
     p.name = "File Test Player"
-    p.tokens["white"] = 5
+    p.tokens[Token("white")] = 5
     p.points = 12
     
     # Save to file
@@ -183,7 +183,7 @@ def test_json_file_operations(tmp_path):
     # Load from file
     p2 = PlayerState.load_from_file(str(test_file))
     assert p2.name == p.name
-    assert p2.tokens["white"] == 5
+    assert p2.tokens[Token("white")] == 5
     assert p2.points == 12
 
 
@@ -196,7 +196,7 @@ def test_json_with_empty_player():
     
     # Deserialize and verify defaults
     p2 = PlayerState.from_json(json_data)
-    assert p2.tokens["black"] == 0
+    assert p2.tokens[Token("black")] == 0
     assert len(p2.reserved) == 0
     assert len(p2.purchased) == 0
     assert p2.privileges == 0
