@@ -407,7 +407,7 @@ class GameView:
             # Register the reserved card for click detection
             self.layout_registry.register(
                 f"reserved_card_{i}",
-                card_rect,
+                pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
                 "reserved_card",
                 {"index": i, "card": card}
             )
@@ -501,7 +501,7 @@ class GameView:
         # Register the bag for click detection
         self.layout_registry.register(
             "bag",
-            rect,
+            pygame.Rect(x, y, scaled_bag.get_width(), scaled_bag.get_height()),
             "bag",
             {"desk": desk},
         )
@@ -525,7 +525,7 @@ class GameView:
                 # Register privilege for click detection
                 self.layout_registry.register(
                     f"privilege_{i}",
-                    sub_rect,
+                    pygame.Rect(x, y, scaled_privilege.get_width(), scaled_privilege.get_height()),
                     "privilege",
                     {"index": i}
                 )
@@ -550,7 +550,7 @@ class GameView:
                 # Register royal card for click detection
                 self.layout_registry.register(
                     f"royal_{i}",
-                    sub_rect,
+                    pygame.Rect(x, y, scaled_royal.get_width(), scaled_royal.get_height()),
                     "royal",
                     {"index": i, "card": desk.royals[i]}
                 )
@@ -597,7 +597,7 @@ class GameView:
                     # Register token for click detection
                     self.layout_registry.register(
                         f"token_{row_idx}_{col_idx}",
-                        margin_rect,
+                        pygame.Rect(tx, ty, scaled_token.get_width(), scaled_token.get_height()),
                         "token",
                         {"row": row_idx, "col": col_idx, "color": token.color, "token": token}
                     )
@@ -632,7 +632,7 @@ class GameView:
             # Register face-down card for click detection
             self.layout_registry.register(
                 f"face_down_card_{i+1}",
-                pygame.Rect(x, y, w, h),
+                pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
                 "face_down_card",
                 {"level": 3-i, "index": 0}
             )
@@ -664,7 +664,7 @@ class GameView:
                 card = desk.pyramid.slots[level][i] if i < len(desk.pyramid.slots[level]) else None
                 self.layout_registry.register(
                     f"pyramid_card_{level}_{i+1}",
-                    (x, y, scaled_card_width, h),
+                    pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
                     "pyramid_card",
                     {"level": level, "index": i+1, "card": card}
                 )
