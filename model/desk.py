@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # Import from model directory (same directory)
 from model.cards import Deck, Pyramid, Royal, Card
-from model.tokens import Bag, Board
+from model.tokens import Bag, Board, Token
 from model.player import PlayerState
 from model.actions import ActionType, Action, GameState, CurrentAction, ActionButton
 
@@ -33,7 +33,8 @@ class Desk:
         # Token board (5×5 grid)
         with open(token_json, "r", encoding="utf-8") as f:
             counts: Dict[str, int] = json.load(f)
-        self.bag = Bag(counts)
+        tokens = {Token(color): count for color, count in counts.items()}
+        self.bag = Bag(tokens)
         self.board = Board()
         # self.board.fill_grid(self.bag.draw())
         # Royal cards pool
