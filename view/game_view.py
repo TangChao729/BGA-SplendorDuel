@@ -5,6 +5,7 @@ from view.layout import HSplit, VSplit, Margin, LayoutRegistry
 from model.desk import Desk
 from view.assets import AssetManager
 from model.actions import CurrentAction, ActionButton
+from controller.selection_manager import SelectionManager
 
 # Layout constants
 SCREEN_WIDTH = 1900
@@ -80,7 +81,7 @@ class GameView:
             [("player1", 1), ("player2", 1)],
         )
 
-    def render(self, desk: Desk, dialogue: str, current_action: CurrentAction) -> None:
+    def render(self, desk: Desk, dialogue: str, current_action: CurrentAction, selection_manager: SelectionManager) -> None:
         """
         Render the entire game view, including background, main panel, and player panels.
         """
@@ -91,7 +92,12 @@ class GameView:
         self.draw_main_panel(desk, dialogue, self.view_split.children["main"])
         self.draw_player_panel(desk.players[0], self.right_split.children["player1"])
         self.draw_player_panel(desk.players[1], self.right_split.children["player2"])
-        self._draw_action_panel(desk, self.action_panel_rect, current_action)
+        self.draw_action_panel(desk, self.action_panel_rect, current_action)
+
+        # highlight the selected element
+        for element in selection_manager.selected:
+            self._highlight_rect(element.rect)
+
         pygame.display.flip()
 
     def _scale_image_to_fit(
@@ -427,7 +433,7 @@ class GameView:
         self._draw_board(desk, Margin(lower_split.children["board"], (MARGIN_MEDIUM,)*4).rect)
         self._draw_pyramid(desk, Margin(lower_split.children["pyramid"], (MARGIN_MEDIUM,)*4).rect)
 
-    def _draw_action_panel(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect], current_action: CurrentAction) -> None:
+    def draw_action_panel(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect], current_action: CurrentAction) -> None:
         """
         Draw the action panel with explanation and action buttons in one horizontal line.
         """
@@ -498,7 +504,7 @@ class GameView:
             "bag",
             rect,
             "bag",
-            {"desk": desk}
+            {"desk": desk},
         )
 
     def _draw_privileges(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
@@ -705,12 +711,13 @@ class GameView:
         rect = to_rect(rect)
         pygame.draw.rect(self.screen, highlight, rect, BORDER_WIDTH)
 
-    # INSERT_YOUR_CODE
-    def _highlight_rect(self, rect: Union[Tuple[int, int, int, int], pygame.Rect], alpha: int = 80) -> None:
+    
+    def _highlight_rect(self, rect: Union[Tuple[int, int, int, int], pygame.Rect], alpha: int = 50) -> None:
         """
         Draw a semi-transparent yellow highlight over the given rectangle.
         """
         rect = to_rect(rect)
+        self._draw_boarder(rect, highlight=(255, 255, 0))
         highlight_surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
         highlight_surface.fill((255, 255, 0, alpha))
         self.screen.blit(highlight_surface, (rect.x, rect.y))

@@ -3,10 +3,10 @@ class SelectionManager:
         self.selected = []
 
     def select(self, element):
-        self.selected.append(element)
-
-    def deselect(self, element):
-        self.selected.remove(element)
+        if element in self.selected:
+            self.selected.remove(element)
+        else:
+            self.selected.append(element)
 
     def clear(self):
         self.selected = []

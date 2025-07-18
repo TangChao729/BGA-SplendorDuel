@@ -31,7 +31,7 @@ class LayoutRegistry:
             name=name,
             rect=rect,
             element_type=element_type,
-            metadata=metadata or {}
+            metadata=metadata or {},
         ))
     
     def find_element_at(self, pos: Tuple[int, int]) -> Optional[LayoutElement]:
