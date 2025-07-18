@@ -2,11 +2,12 @@ import json
 import random
 from typing import Any, Dict, List, Optional
 from model.tokens import Token
+from model.piece import Piece
 
 random.seed(42)  # For reproducibility in tests
 
 
-class Card:
+class Card(Piece):
     """
     Represents a single Jewel card in Splendor Duel.
 
@@ -32,7 +33,7 @@ class Card:
         crowns: int,
         cost: Dict[Token, int],
     ):
-        self.id = id
+        super().__init__(id)
         self.level = level
         self.color = color
         self.points = points
@@ -79,7 +80,7 @@ class Card:
         )
 
 
-class Deck:
+class Deck(Piece):
     """
     Manages a shuffled deck of Card instances.
 
@@ -90,6 +91,7 @@ class Deck:
     """
 
     def __init__(self, cards: List[Card]):
+        super().__init__("deck")
         self._cards: List[Card] = cards.copy()
         self.shuffle()
 
@@ -146,7 +148,7 @@ class Deck:
         return cls(cards)
 
 
-class Royal:
+class Royal(Piece):
     """
     Represents a Royal card in Splendor Duel.
 
@@ -157,7 +159,7 @@ class Royal:
     """
 
     def __init__(self, id: str, points: int, ability: Optional[str]):
-        self.id = id
+        super().__init__(id)
         self.points = points
         self.ability = ability
 
@@ -185,7 +187,7 @@ class Royal:
         return f"<Royal id={self.id!r} points={self.points} ability={self.ability!r}>"
 
 
-class Pyramid:
+class Pyramid(Piece):
     """
     Manages the pyramid layout of cards in Splendor Duel.
 
@@ -198,6 +200,7 @@ class Pyramid:
     SLOT_COUNTS: Dict[int, int] = {3: 3, 2: 4, 1: 5}
 
     def __init__(self, decks: Dict[int, Deck]):
+        super().__init__("pyramid")
         self.decks = decks
         self.slots: Dict[int, List[Optional[Card]]] = {}
         for level, deck in decks.items():

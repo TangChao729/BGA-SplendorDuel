@@ -2,7 +2,7 @@ import json
 import random
 from typing import Dict, List, Optional, Tuple, Any
 random.seed(42)  # For reproducibility in tests
-
+from model.piece import Piece
 
 def _symbol(color: str) -> str:
     # map token colors to display symbols or color names
@@ -17,8 +17,19 @@ def _symbol(color: str) -> str:
     }
     return symbol_map.get(color, color)
 
+def _id_tracker(color: str) -> str:
+    full_ids = {
+        "black": [f"black-{i}" for i in range(4, -1, -1)],
+        "red": [f"red-{i}" for i in range(4, -1, -1)],
+        "green": [f"green-{i}" for i in range(4, -1, -1)],
+        "blue": [f"blue-{i}" for i in range(4, -1, -1)],
+        "white": [f"white-{i}" for i in range(4, -1, -1)],
+        "pearl": [f"pearl-{i}" for i in range(2, -1, -1)],
+        "gold": [f"gold-{i}" for i in range(3, -1, -1)],
+    }
+    return full_ids[color].pop()
 
-class Token:
+class Token(Piece):
     """
     Represents a single token unit in Splendor Duel.
 
@@ -27,6 +38,7 @@ class Token:
     """
 
     def __init__(self, color: str):
+        super().__init__(_id_tracker(color))
         self.color = color
 
     def to_dict(self) -> Dict[str, Any]:
@@ -36,7 +48,7 @@ class Token:
         return f"<Token {self.color}:{_symbol(self.color)}>"
 
 
-class Bag:
+class Bag(Piece):
     """
     Holds all tokens available to seed and refill the board.
 
@@ -52,6 +64,7 @@ class Bag:
         Args:
             initial_counts: map from token color to starting count.
         """
+        super().__init__("bag")
         self._tokens: List[Token] = []
         for color, count in initial_counts.items():
             for _ in range(count):
@@ -106,7 +119,7 @@ class Bag:
         return len(self._tokens)
 
 
-class Board:
+class Board(Piece):
     """
     Represents the board as a 5×5 grid of tokens drawn from the bag.
 
@@ -117,6 +130,7 @@ class Board:
     """
 
     def __init__(self, rows: int = 5, cols: int = 5):
+        super().__init__("board")
         self.rows = rows
         self.cols = cols
         self.grid: List[List[Optional[Token]]] = [[None] * cols for _ in range(rows)]

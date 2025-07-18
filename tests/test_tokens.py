@@ -12,6 +12,8 @@ def test_token_repr_and_todict():
     assert pearl.to_dict() == {"color": "pearl"}
     assert "gold" in repr(gold) and "🟡" in repr(gold)
     assert gold.to_dict() == {"color": "gold"}
+    assert pearl.id == "pearl-0"
+    assert gold.id == "gold-0"
 
 
 def test_bag_basic_draw_return_counts_repr(tmp_path):
