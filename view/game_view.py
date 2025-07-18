@@ -636,7 +636,7 @@ class GameView:
                 "face_down_card",
                 {"level": 3-i, "index": 0}
             )
-            
+
         # Layout for face-up cards
         def layout_face_up(level: int, count: int, y_rect: Any) -> dict:
             total_occupied_width = count * scaled_card_width + (count - 1) * MARGIN_SMALL * 2
@@ -650,66 +650,32 @@ class GameView:
                 )
                 for i in range(count)
             }
+        
+        def draw_face_up_card(card_amt: int, face_up_level_rects: List[pygame.Rect], level: int):
+            for i in range(card_amt):
+                x, y, w, h = face_up_level_rects[f"{i+1}"]
+                card_sprite = self.assets.get_card_sprite(level=level, index=i+1) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[level][i+1]
+                scaled_card, (x, y) = self._scale_image_to_fit(
+                    card_sprite,
+                    pygame.Rect(x, y, scaled_card_width, h),
+                    margin=0,
+                )
+                self.screen.blit(scaled_card, (x, y))
+                card = desk.pyramid.slots[level][i] if i < len(desk.pyramid.slots[level]) else None
+                self.layout_registry.register(
+                    f"pyramid_card_{level}_{i+1}",
+                    (x, y, scaled_card_width, h),
+                    "pyramid_card",
+                    {"level": level, "index": i+1, "card": card}
+                )
+
         face_up_level_1 = layout_face_up(1, 5, face_up_rect.children["level_1"])
-        for i in range(5):
-            x, y, w, h = face_up_level_1[f"{i+1}"]
-            card_sprite = self.assets.get_card_sprite(level=1, index=i+1) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[1][i+1]
-            scaled_card, (x, y) = self._scale_image_to_fit(
-                card_sprite,
-                pygame.Rect(x, y, scaled_card_width, h),
-                margin=0,
-            )
-            self.screen.blit(scaled_card, (x, y))
-            
-            # Register pyramid card for click detection
-            card = desk.pyramid.slots[1][i] if i < len(desk.pyramid.slots[1]) else None
-            if card:
-                self.layout_registry.register(
-                    f"pyramid_card_1_{i+1}",
-                    (x, y, scaled_card_width, h),
-                    "pyramid_card",
-                    {"level": 1, "index": i+1, "card": card}
-                )
+        draw_face_up_card(5, face_up_level_1, 1)
         face_up_level_2 = layout_face_up(2, 4, face_up_rect.children["level_2"])
-        for i in range(4):
-            x, y, w, h = face_up_level_2[f"{i+1}"]
-            card_sprite = self.assets.get_card_sprite(level=2, index=i+1) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[2][i+1]
-            scaled_card, (x, y) = self._scale_image_to_fit(
-                card_sprite,
-                pygame.Rect(x, y, scaled_card_width, h),
-                margin=0,
-            )
-            self.screen.blit(scaled_card, (x, y))
-            
-            # Register pyramid card for click detection
-            card = desk.pyramid.slots[2][i] if i < len(desk.pyramid.slots[2]) else None
-            if card:
-                self.layout_registry.register(
-                    f"pyramid_card_2_{i+1}",
-                    (x, y, scaled_card_width, h),
-                    "pyramid_card",
-                    {"level": 2, "index": i+1, "card": card}
-                )
+        draw_face_up_card(4, face_up_level_2, 2)
         face_up_level_3 = layout_face_up(3, 3, face_up_rect.children["level_3"])
-        for i in range(3):
-            x, y, w, h = face_up_level_3[f"{i+1}"]
-            card_sprite = self.assets.get_card_sprite(level=3, index=i+1) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[3][i+1]
-            scaled_card, (x, y) = self._scale_image_to_fit(
-                card_sprite,
-                pygame.Rect(x, y, scaled_card_width, h),
-                margin=0,
-            )
-            self.screen.blit(scaled_card, (x, y))
-            
-            # Register pyramid card for click detection
-            card = desk.pyramid.slots[3][i] if i < len(desk.pyramid.slots[3]) else None
-            if card:
-                self.layout_registry.register(
-                    f"pyramid_card_3_{i+1}",
-                    (x, y, scaled_card_width, h),
-                    "pyramid_card",
-                    {"level": 3, "index": i+1, "card": card}
-                )
+        draw_face_up_card(3, face_up_level_3, 3)
+
 
     def _draw_boarder(self, rect: Union[Tuple[int, int, int, int], pygame.Rect], highlight: Tuple[int, int, int] = BLACK) -> None:
         """
