@@ -1,11 +1,10 @@
 import pygame
 from typing import Dict, List, Tuple, Any, Union, Optional
-from view.layout import HSplit, VSplit, Margin, LayoutRegistry
+from view.layout import HSplit, VSplit, Margin, LayoutRegistry, LayoutElement
 
 from model.desk import Desk
 from view.assets import AssetManager
 from model.actions import CurrentAction, ActionButton
-from controller.selection_manager import SelectionManager
 
 # Layout constants
 SCREEN_WIDTH = 1900
@@ -81,7 +80,7 @@ class GameView:
             [("player1", 1), ("player2", 1)],
         )
 
-    def render(self, desk: Desk, dialogue: str, current_action: CurrentAction, selection_manager: SelectionManager) -> None:
+    def render(self, desk: Desk, dialogue: str, current_action: CurrentAction, current_selection: List[LayoutElement]) -> None:
         """
         Render the entire game view, including background, main panel, and player panels.
         """
@@ -95,7 +94,7 @@ class GameView:
         self.draw_action_panel(desk, self.action_panel_rect, current_action)
 
         # highlight the selected element
-        for element in selection_manager.selected:
+        for element in current_selection:
             self._highlight_rect(element.rect)
 
         pygame.display.flip()
@@ -629,6 +628,15 @@ class GameView:
             )
             self.screen.blit(scaled_card, (x, y))
             scaled_card_width = scaled_card.get_width()
+
+            # Register face-down card for click detection
+            self.layout_registry.register(
+                f"face_down_card_{i+1}",
+                pygame.Rect(x, y, w, h),
+                "face_down_card",
+                {"level": 3-i, "index": 0}
+            )
+            
         # Layout for face-up cards
         def layout_face_up(level: int, count: int, y_rect: Any) -> dict:
             total_occupied_width = count * scaled_card_width + (count - 1) * MARGIN_SMALL * 2

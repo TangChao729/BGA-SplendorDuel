@@ -9,7 +9,7 @@ from model.tokens import Token
 from model.actions import ActionType, Action, GameState, CurrentAction, ActionButton  # actions.py is in model/ directory
 from view.assets import AssetManager  # assets.py is in view/ directory
 from view.game_view import GameView   # game_view.py is in view/ directory
-from controller.selection_manager import SelectionManager
+from view.layout import LayoutElement
 
 # Screen dimensions (should match those in game_view)
 from view.game_view import SCREEN_WIDTH, SCREEN_HEIGHT
@@ -39,7 +39,7 @@ class GameController:
         self.pending_action_button: Optional[ActionButton] = None
         self.info_message: str = ""
         self.pending_action: Optional[Action] = None
-        self.selection_manager = SelectionManager()
+        self.current_selection: Optional[LayoutElement] = []
 
     def run(self):
         """Main Pygame loop: handle events, update model, render view."""
@@ -69,7 +69,7 @@ class GameController:
                         except Exception as e:
                             self.dialogue = str(e)
             # Pass current_action to GameView
-            self.view.render(self.desk, self.dialogue, self.current_action, self.selection_manager)
+            self.view.render(self.desk, self.dialogue, self.current_action, self.current_selection)
             self.clock.tick(30)
         pygame.quit()
 
@@ -86,7 +86,10 @@ class GameController:
         self.dialogue = f"Clicked {element.element_type}: {element.name}"
 
         # highlight the selected element
-        self.selection_manager.select(element)
+        if element not in self.current_selection:
+            self.current_selection.append(element)
+        else:
+            self.current_selection.remove(element)
 
         # Handle action panel button clicks
         if element.element_type == "action_button":
