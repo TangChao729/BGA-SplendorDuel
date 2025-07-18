@@ -9,7 +9,6 @@ from model.tokens import Token
 from model.actions import ActionType, Action, GameState, CurrentAction, ActionButton  # actions.py is in model/ directory
 from view.assets import AssetManager  # assets.py is in view/ directory
 from view.game_view import GameView   # game_view.py is in view/ directory
-from view.layout import layout_registry  # layout.py is in view/ directory
 
 # Screen dimensions (should match those in game_view)
 from view.game_view import SCREEN_WIDTH, SCREEN_HEIGHT
@@ -32,7 +31,6 @@ class GameController:
         self.dialogue = "Welcome to Splendor Duel!"
         self.clock = pygame.time.Clock()
         self.running = True
-        
         # Click state management
         self.selected_tokens: List[Tuple[int, int]] = []  # (row, col) coordinates
         self.selected_cards: List[Tuple[int, int]] = []   # (level, index) coordinates
@@ -54,7 +52,6 @@ class GameController:
                         self.running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     action = self._interpret_click(event.pos)
-                    print(f"Current player: {self.desk.current_player.name}")
                     if action:
                         try:
                             self.desk.apply_action(action)
@@ -79,7 +76,7 @@ class GameController:
         Map a screen click (x,y) to a game Action, or None if click is irrelevant.
         Uses the layout registry to detect clicks on game elements.
         """
-        element = layout_registry.find_element_at(pos)
+        element = self.view.layout_registry.find_element_at(pos)
         if not element:
             self.dialogue = f"Click at {pos} - no element found"
             return None

@@ -51,9 +51,6 @@ class LayoutRegistry:
         """Find all elements with a specific name pattern."""
         return [e for e in self.elements if name in e.name]
 
-# Global registry instance
-layout_registry = LayoutRegistry()
-
 class HSplit:
     """
     Horizontally split a rectangle into named sub-rectangles based on weights.

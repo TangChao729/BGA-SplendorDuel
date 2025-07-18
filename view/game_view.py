@@ -1,6 +1,6 @@
 import pygame
 from typing import Dict, List, Tuple, Any, Union, Optional
-from view.layout import HSplit, VSplit, Margin, layout_registry
+from view.layout import HSplit, VSplit, Margin, LayoutRegistry
 
 from model.desk import Desk
 from view.assets import AssetManager
@@ -68,7 +68,7 @@ class GameView:
         self.font = pygame.font.SysFont(None, FONT_SIZE_DEFAULT)
         self.tracker_font = pygame.font.SysFont(None, FONT_SIZE_TRACKER)
         self.scaled_image_cache = ScaledImageCache()
-
+        self.layout_registry = LayoutRegistry()
         # main panel
         self.view_split = HSplit(
             (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), [("main", 9), ("right", 2)]
@@ -85,7 +85,7 @@ class GameView:
         Render the entire game view, including background, main panel, and player panels.
         """
         # Clear the layout registry at the start of each frame
-        layout_registry.clear()
+        self.layout_registry.clear()
         
         self.draw_background()
         self.draw_main_panel(desk, dialogue, self.view_split.children["main"])
@@ -400,7 +400,7 @@ class GameView:
             self.screen.blit(scaled_card, (x, y))
             
             # Register the reserved card for click detection
-            layout_registry.register(
+            self.layout_registry.register(
                 f"reserved_card_{i}",
                 card_rect,
                 "reserved_card",
@@ -473,7 +473,7 @@ class GameView:
             pygame.draw.rect(self.screen, (30, 90, 200), btn_rect, border_radius=10)
             self.screen.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
             # Register button for click detection
-            layout_registry.register(f"action_button_{i}", btn_rect, "action_button", {"button": button})
+            self.layout_registry.register(f"action_button_{i}", btn_rect, "action_button", {"button": button})
             current_x += btn_width + spacing
 
     def _draw_bag(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
@@ -494,7 +494,7 @@ class GameView:
         self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, rect.y + rect.height - text_height))
 
         # Register the bag for click detection
-        layout_registry.register(
+        self.layout_registry.register(
             "bag",
             rect,
             "bag",
@@ -518,7 +518,7 @@ class GameView:
                 self.screen.blit(scaled_privilege, (x, y))
                 
                 # Register privilege for click detection
-                layout_registry.register(
+                self.layout_registry.register(
                     f"privilege_{i}",
                     sub_rect,
                     "privilege",
@@ -543,7 +543,7 @@ class GameView:
                 self.screen.blit(scaled_royal, (x, y))
                 
                 # Register royal card for click detection
-                layout_registry.register(
+                self.layout_registry.register(
                     f"royal_{i}",
                     sub_rect,
                     "royal",
@@ -590,7 +590,7 @@ class GameView:
                     self.screen.blit(scaled_token, (tx, ty))
                     
                     # Register token for click detection
-                    layout_registry.register(
+                    self.layout_registry.register(
                         f"token_{row_idx}_{col_idx}",
                         margin_rect,
                         "token",
@@ -650,7 +650,7 @@ class GameView:
             # Register pyramid card for click detection
             card = desk.pyramid.slots[1][i] if i < len(desk.pyramid.slots[1]) else None
             if card:
-                layout_registry.register(
+                self.layout_registry.register(
                     f"pyramid_card_1_{i+1}",
                     (x, y, scaled_card_width, h),
                     "pyramid_card",
@@ -670,7 +670,7 @@ class GameView:
             # Register pyramid card for click detection
             card = desk.pyramid.slots[2][i] if i < len(desk.pyramid.slots[2]) else None
             if card:
-                layout_registry.register(
+                self.layout_registry.register(
                     f"pyramid_card_2_{i+1}",
                     (x, y, scaled_card_width, h),
                     "pyramid_card",
@@ -690,7 +690,7 @@ class GameView:
             # Register pyramid card for click detection
             card = desk.pyramid.slots[3][i] if i < len(desk.pyramid.slots[3]) else None
             if card:
-                layout_registry.register(
+                self.layout_registry.register(
                     f"pyramid_card_3_{i+1}",
                     (x, y, scaled_card_width, h),
                     "pyramid_card",
@@ -704,3 +704,13 @@ class GameView:
         """
         rect = to_rect(rect)
         pygame.draw.rect(self.screen, highlight, rect, BORDER_WIDTH)
+
+    # INSERT_YOUR_CODE
+    def _highlight_rect(self, rect: Union[Tuple[int, int, int, int], pygame.Rect], alpha: int = 80) -> None:
+        """
+        Draw a semi-transparent yellow highlight over the given rectangle.
+        """
+        rect = to_rect(rect)
+        highlight_surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        highlight_surface.fill((255, 255, 0, alpha))
+        self.screen.blit(highlight_surface, (rect.x, rect.y))
