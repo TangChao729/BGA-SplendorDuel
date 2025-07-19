@@ -1,6 +1,7 @@
 import pygame
 import sys
 import os
+import copy
 from typing import Tuple, Optional, List
 
 # Import from the correct locations based on your directory structure
@@ -42,15 +43,16 @@ class GameController:
         self.pending_action: Optional[Action] = None
         self.current_selection: Optional[LayoutElement] = []
         self.current_player_index: int = 0
-        self.desk_snapshot: Desk = None
+        
 
     def run(self):
         """Main Pygame loop: handle events, update model, render view."""
         # print(self.desk.board.eligible_draws())
+        self.desk_snapshot: Desk = copy.deepcopy(self.desk)
         while self.running:
             # record the start state when change player
             if self.desk.current_player_index != self.current_player_index:
-                self.desk_snapshot = self.desk.deepcopy()
+                self.desk_snapshot = copy.deepcopy(self.desk)
                 self.current_player_index = self.desk.current_player_index
             self.current_action: CurrentAction = self.desk.get_current_action(state=self.current_state)
             for event in pygame.event.get():
@@ -248,7 +250,7 @@ class GameController:
                         if combo not in eligible_draws:
                             self.dialogue = "Selected tokens are not eligible for taking"
                             return None
-                        self.current_state = GameState.START_OF_ROUND
+                        self.current_state = GameState.POST_ACTION_CHECKS
                         action = Action(ActionType.TAKE_TOKENS, {"combo": combo})
                         self.current_selection.clear()
                         self.current_action = self.desk.get_current_action(state=self.current_state)
@@ -262,6 +264,10 @@ class GameController:
                 # TODO: Handle gold token and card selection
                 
             case GameState.POST_ACTION_CHECKS:
+                # TODO: handle distoken
+                # Only stay in this state if these conditions are met:
+                # 1. The current player has more than 10 tokens
+
                 if button.action == "continue_to_confirm_round":
                     self.current_state = GameState.CONFIRM_ROUND
                     self.current_action = self.desk.get_current_action(state=self.current_state)
@@ -277,7 +283,7 @@ class GameController:
                     # Roll back to start_of_round
                     self.current_state = GameState.START_OF_ROUND
                     # restore the desk to the start of round
-                    self.desk = self.desk_snapshot.deepcopy()
+                    self.desk = copy.deepcopy(self.desk_snapshot)
                     self.current_action = self.desk.get_current_action(state=self.current_state)
                     return None
         
