@@ -268,6 +268,7 @@ class Desk:
                 explanation = "Select up to 3 eligible tokens:"
                 buttons = []
                 # TODO: Add token selection buttons based on eligible combinations
+                buttons.append(ActionButton("Confirm", "confirm"))
                 buttons.append(ActionButton("Cancel", "cancel"))
                 return CurrentAction(GameState.TAKE_TOKENS, explanation, buttons)
                 

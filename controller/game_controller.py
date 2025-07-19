@@ -137,7 +137,11 @@ class GameController:
                 allowed_selections = [Token]
                 if element.element_type in allowed_selections:
                     if element not in self.current_selection:
-                        self.current_selection.append(element)
+                        if len(self.current_selection) < 3:
+                            self.current_selection.append(element)
+                        else:
+                            self.dialogue = "Cannot select more than 3 tokens"
+                            return None
                     else:
                         self.current_selection.remove(element)
                 else:
@@ -226,11 +230,29 @@ class GameController:
             case GameState.TAKE_TOKENS:
                 if button.action == "cancel":
                     self.current_state = GameState.START_OF_ROUND
+                    self.current_selection.clear()
                     self.current_action = self.desk.get_current_action(state=self.current_state)
                     return None
                 elif button.action == "confirm":
-                    pass
-                # TODO: Handle token selection for taking tokens
+                    if len(self.current_selection) > 3:
+                        self.dialogue = "Cannot select more than 3 tokens"
+                        return None
+                    elif len(self.current_selection) < 1:
+                        self.dialogue = "Must select at least 1 token"
+                        return None
+                    else:
+                        eligible_draws = self.desk.board.eligible_draws()
+                        combo = {}
+                        for element in self.current_selection:
+                            combo[element.element] = combo.get(element.element, []) + [element.metadata["position"]]
+                        if combo not in eligible_draws:
+                            self.dialogue = "Selected tokens are not eligible for taking"
+                            return None
+                        self.current_state = GameState.START_OF_ROUND
+                        action = Action(ActionType.TAKE_TOKENS, {"combo": combo})
+                        self.current_selection.clear()
+                        self.current_action = self.desk.get_current_action(state=self.current_state)
+                        return action
                 
             case GameState.TAKE_GOLD_AND_RESERVE:
                 if button.action == "cancel":
@@ -413,7 +435,7 @@ if __name__ == '__main__':
     ctrl.desk.add_player(player1, player2)
 
     # add artificial player data for testing
-    # ctrl.desk.board.fill_grid(ctrl.desk.bag.draw())
+    ctrl.desk.board.fill_grid(ctrl.desk.bag.draw())
         # ctrl.desk.players[0].privileges = 3
     # ctrl.desk.players[0].tokens['black'] = 2
     # ctrl.desk.players[0].tokens['red'] = 1
