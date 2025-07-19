@@ -5,6 +5,8 @@ from view.layout import HSplit, VSplit, Margin, LayoutRegistry, LayoutElement
 from model.desk import Desk
 from view.assets import AssetManager
 from model.actions import CurrentAction, ActionButton
+from model.cards import Card
+from model.tokens import Token
 
 # Layout constants
 SCREEN_WIDTH = 1900
@@ -292,7 +294,7 @@ class GameView:
             ),
         )
 
-    def _draw_token(self, counts: Dict[str, int], split: Any, color: str) -> None:
+    def _draw_token(self, counts: Dict[Token, int], split: Any, color: str) -> None:
         """
         Draw a single token of the given color and its count.
         """
@@ -300,7 +302,7 @@ class GameView:
             self.assets.token_sprites[color], split.children[color], margin=MARGIN_SMALL
         )
         self.screen.blit(sclaled_token, to_rect(split.children[color])[:2])
-        txt_gold = self.tracker_font.render(f":{str(counts.get(color, 0))}", True, BLACK)
+        txt_gold = self.tracker_font.render(f":{str(counts.get(Token(color), 0))}", True, BLACK)
         self.screen.blit(
             txt_gold,
             (
@@ -309,7 +311,7 @@ class GameView:
             ),
         )
 
-    def _draw_token_area(self, counts: Dict[str, int], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_token_area(self, counts: Dict[Token, int], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
         """
         Draw all tokens for a player in a grid layout.
         """
@@ -379,7 +381,7 @@ class GameView:
             txt_rect = txt.get_rect(center=card_rect.center)
             self.screen.blit(txt, txt_rect)
 
-    def _draw_reserved_cards(self, reserved: List[Any], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_reserved_cards(self, reserved: List[Card], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
         """
         Draw the player's reserved cards in a row.
         """
@@ -408,8 +410,8 @@ class GameView:
             self.layout_registry.register(
                 f"reserved_card_{i}",
                 pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
-                "reserved_card",
-                {"index": i, "card": card}
+                card,
+                {"index": i}
             )
 
     def draw_main_panel(self, desk: Desk, dialogue: str, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
@@ -478,7 +480,7 @@ class GameView:
             pygame.draw.rect(self.screen, (30, 90, 200), btn_rect, border_radius=10)
             self.screen.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
             # Register button for click detection
-            self.layout_registry.register(f"action_button_{i}", btn_rect, "action_button", {"button": button})
+            self.layout_registry.register(f"action_button_{i}", btn_rect, button, {})
             current_x += btn_width + spacing
 
     def _draw_bag(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
@@ -502,8 +504,8 @@ class GameView:
         self.layout_registry.register(
             "bag",
             pygame.Rect(x, y, scaled_bag.get_width(), scaled_bag.get_height()),
-            "bag",
-            {"desk": desk},
+            desk.bag,
+            {},
         )
 
     def _draw_privileges(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
@@ -522,13 +524,14 @@ class GameView:
                 )
                 self.screen.blit(scaled_privilege, (x, y))
                 
-                # Register privilege for click detection
-                self.layout_registry.register(
-                    f"privilege_{i}",
-                    pygame.Rect(x, y, scaled_privilege.get_width(), scaled_privilege.get_height()),
-                    "privilege",
-                    {"index": i}
-                )
+                # Privilege is not clickable
+                # # Register privilege for click detection
+                # self.layout_registry.register(
+                #     f"privilege_{i}",
+                #     pygame.Rect(x, y, scaled_privilege.get_width(), scaled_privilege.get_height()),
+                #     "privilege",
+                #     {"index": i}
+                # )
 
     def _draw_royal(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
         """
@@ -547,13 +550,14 @@ class GameView:
                 )
                 self.screen.blit(scaled_royal, (x, y))
                 
-                # Register royal card for click detection
-                self.layout_registry.register(
-                    f"royal_{i}",
-                    pygame.Rect(x, y, scaled_royal.get_width(), scaled_royal.get_height()),
-                    "royal",
-                    {"index": i, "card": desk.royals[i]}
-                )
+                # Royal card is not clickable
+                # # Register royal card for click detection
+                # self.layout_registry.register(
+                #     f"royal_{i}",
+                #     pygame.Rect(x, y, scaled_royal.get_width(), scaled_royal.get_height()),
+                #     desk.royals[i],
+                #     {"index": i}
+                # )
 
     def _draw_dialogue_panel(self, text: str, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
         """
@@ -598,8 +602,8 @@ class GameView:
                     self.layout_registry.register(
                         f"token_{row_idx}_{col_idx}",
                         pygame.Rect(tx, ty, scaled_token.get_width(), scaled_token.get_height()),
-                        "token",
-                        {"row": row_idx, "col": col_idx, "color": token.color, "token": token}
+                        token,
+                        {"position": (row_idx, col_idx)}
                     )
 
     def _draw_pyramid(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
@@ -665,8 +669,8 @@ class GameView:
                 self.layout_registry.register(
                     f"pyramid_card_{level}_{i+1}",
                     pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
-                    "pyramid_card",
-                    {"level": level, "index": i+1, "card": card}
+                    card,
+                    {"level": level, "index": i+1}
                 )
 
         face_up_level_1 = layout_face_up(1, 5, face_up_rect.children["level_1"])

@@ -42,11 +42,8 @@ class Desk:
         # Privileges (scrolls) pool above board
         self.privileges: int = initial_privileges
         # Two-player states
-        player_1: PlayerState = PlayerState()
-        player_1.name = "Player 1"  
-        player_2: PlayerState = PlayerState()
-        player_2.name = "Player 2"
-        self.players: List[PlayerState] = [player_1, player_2]
+
+        self.players: List[PlayerState] = []
         # Index of current player (0 or 1)
         self.current_player_index: int = 0
         # Winner index when game ends
@@ -55,6 +52,10 @@ class Desk:
     @property
     def current_player(self) -> PlayerState:
         return self.players[self.current_player_index]
+    
+    def add_player(self, player1: PlayerState, player2: PlayerState):
+        self.players.append(player1)
+        self.players.append(player2)
 
     def next_player(self) -> None:
         """
@@ -74,8 +75,9 @@ class Desk:
 
         # 1) Option move one: USE_PRIVILEGE: spend x scroll to draw x tokens
         if player.privileges > 0:
-            for token in self.board.privileges_draws():
-                actions.append(Action(ActionType.USE_PRIVILEGE, {"token": token}))
+            for token, positions in self.board.privileges_draws().items():
+                for position in positions:
+                    actions.append(Action(ActionType.USE_PRIVILEGE, {"token": token, "position": position}))
 
         # 2) Option move two: REPLENISH_BOARD: refill board tokens or cards
         if not self.bag.is_empty():
@@ -138,7 +140,7 @@ class Desk:
         match action.type:
             case ActionType.USE_PRIVILEGE:
                 player.use_privilege()
-                player.add_tokens(self.board.draw_tokens(action.payload["token"]))
+                player.add_tokens(self.board.draw_tokens({action.payload["token"]: [action.payload["position"]]}))
 
             case ActionType.REPLENISH_BOARD:
                 self.board.fill_grid(self.bag.draw())
@@ -178,12 +180,13 @@ class Desk:
 
                 player.pay_for_card(card)
 
-        # After any action, check victory
-        if player.has_won():
-            self.winner = self.current_player_index
+        # TODO: handle victory and turn advance in the controller
+        # # After any action, check victory
+        # if player.has_won():
+        #     self.winner = self.current_player_index
 
-        # Advance turn
-        self.next_player()
+        # # Advance turn
+        # self.next_player()
 
     def is_game_over(self) -> bool:
         """

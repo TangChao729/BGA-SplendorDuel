@@ -202,6 +202,7 @@ class Pyramid(Piece):
     def __init__(self, decks: Dict[int, Deck]):
         super().__init__("pyramid")
         self.decks = decks
+        # TODO: add face-down cards
         self.slots: Dict[int, List[Optional[Card]]] = {}
         for level, deck in decks.items():
             count = self.SLOT_COUNTS.get(level, 3)

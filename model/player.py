@@ -19,8 +19,8 @@ class PlayerState:
         points (int): Total prestige points scored.
     """
 
-    def __init__(self) -> None:
-        self.name: Optional[str] = "Player 21:07"
+    def __init__(self, name: str = "default") -> None:
+        self.name: Optional[str] = name
         # token colors: black, red, green, blue, white, pearl, gold (wild)
         self.tokens: Dict[Token, int] = {
             Token(c): 0 for c in ["black", "red", "green", "blue", "white", "pearl", "gold"]

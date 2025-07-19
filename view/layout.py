@@ -1,5 +1,8 @@
 from typing import List, Tuple, Dict, Optional, Any
 from dataclasses import dataclass
+from model.tokens import Token
+from model.cards import Card
+from model.actions import ActionButton
 
 # A simple rectangle type: (x, y, width, height)
 Rect = Tuple[int, int, int, int]
@@ -9,6 +12,7 @@ class LayoutElement:
     """Represents a clickable game element with its screen position and metadata."""
     name: str
     rect: Rect
+    element: Token | Card | ActionButton | str | None
     element_type: str  # 'token', 'card', 'privilege', 'royal', etc.
     metadata: Dict[str, Any]  # Additional data like level, index, color, etc.
 
@@ -25,12 +29,13 @@ class LayoutRegistry:
         """Clear all registered elements (call at start of each frame)."""
         self.elements = []
     
-    def register(self, name: str, rect: Rect, element_type: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+    def register(self, name: str, rect: Rect, element: Token | Card | None, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Register a clickable element."""
         self.elements.append(LayoutElement(
             name=name,
             rect=rect,
-            element_type=element_type,
+            element=element,
+            element_type=type(element),
             metadata=metadata or {},
         ))
     

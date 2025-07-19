@@ -5,6 +5,7 @@ from typing import Tuple, Optional, List
 
 # Import from the correct locations based on your directory structure
 from model.desk import Desk           # desk.py is in model/ directory
+from model.player import PlayerState
 from model.tokens import Token
 from model.actions import ActionType, Action, GameState, CurrentAction, ActionButton  # actions.py is in model/ directory
 from view.assets import AssetManager  # assets.py is in view/ directory
@@ -40,12 +41,18 @@ class GameController:
         self.info_message: str = ""
         self.pending_action: Optional[Action] = None
         self.current_selection: Optional[LayoutElement] = []
+        self.current_player_index: int = 0
+        self.desk_snapshot: Desk = None
 
     def run(self):
         """Main Pygame loop: handle events, update model, render view."""
         # print(self.desk.board.eligible_draws())
-        self.current_action: CurrentAction = self.desk.get_current_action(state=self.current_state)
         while self.running:
+            # record the start state when change player
+            if self.desk.current_player_index != self.current_player_index:
+                self.desk_snapshot = self.desk.deepcopy()
+                self.current_player_index = self.desk.current_player_index
+            self.current_action: CurrentAction = self.desk.get_current_action(state=self.current_state)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
@@ -57,15 +64,15 @@ class GameController:
                     if action:
                         try:
                             self.desk.apply_action(action)
-                            self.selected_tokens.clear()
-                            self.selected_cards.clear()
+                            # self.selected_tokens.clear()
+                            # self.selected_cards.clear()
                             self.dialogue = f"Action executed: {action.type.name}"
                             # After a mandatory action, go to post_action_checks state
-                            self.current_state = GameState.POST_ACTION_CHECKS
-                            self.current_action = self.desk.get_current_action(state=self.current_state)
-                            self.pending_action_button = None
-                            self.info_message = ""
-                            self.pending_action = None
+                            # self.current_state = GameState.POST_ACTION_CHECKS
+                            # self.current_action = self.desk.get_current_action(state=self.current_state)
+                            # self.pending_action_button = None
+                            # self.info_message = ""
+                            # self.pending_action = None
                         except Exception as e:
                             self.dialogue = str(e)
             # Pass current_action to GameView
@@ -83,20 +90,59 @@ class GameController:
             self.dialogue = f"Click at {pos} - no element found"
             return None
         
-        self.dialogue = f"Clicked {element.element_type}: {element.name}"
+        self.dialogue = f"Clicked {element.element_type.__name__}: {element.name}"
 
-        # highlight the selected element
-        if element not in self.current_selection:
-            self.current_selection.append(element)
+        if element.element_type != ActionButton:
+            self._handle_element_selection(element)
         else:
-            self.current_selection.remove(element)
-
-        # Handle action panel button clicks
-        if element.element_type == "action_button":
-            button: ActionButton = element.metadata["button"]
+            button: ActionButton = element.element
             return self._handle_action_button_click(button)
         
         return None
+    
+    def _handle_element_selection(self, element: LayoutElement) -> None:
+        """Handle element selection."""
+        match self.current_state:
+
+            # During start of round, no elements can be selected
+            case GameState.START_OF_ROUND:
+                allowed_selections = []
+                if element.element_type in allowed_selections:
+                    if element not in self.current_selection:
+                        self.current_selection.append(element)
+                    else:
+                        self.current_selection.remove(element)
+                else:
+                    self.dialogue = f"Cannot select {element.name} in {self.current_state.name}"
+                    return None
+                
+            # During privilege use, only token and only one token can be selected
+            case GameState.USE_PRIVILEGE:
+                allowed_selections = [Token]
+                if element.element_type in allowed_selections:
+                    if element not in self.current_selection:
+                        if len(self.current_selection) < 1:
+                            self.current_selection.append(element)
+                        else:
+                            self.dialogue = "Cannot select more than 1 token"
+                            return None
+                    else:
+                        self.current_selection.remove(element)
+                else:
+                    self.dialogue = f"Cannot select {element.name} in {self.current_state.name}"
+                    return None
+                
+            # During take tokens, only tokens can be selected
+            case GameState.TAKE_TOKENS:
+                allowed_selections = [Token]
+                if element.element_type in allowed_selections:
+                    if element not in self.current_selection:
+                        self.current_selection.append(element)
+                    else:
+                        self.current_selection.remove(element)
+                else:
+                    self.dialogue = f"Cannot select {element.name} in {self.current_state.name}"
+                    return None
 
     def _handle_action_button_click(self, button: ActionButton) -> Optional[Action]:
         """Handle clicks on action panel buttons and manage state transitions."""
@@ -127,11 +173,21 @@ class GameController:
                         return None
                         
             case GameState.USE_PRIVILEGE:
-                if button.action == "cancel":
-                    self.current_state = GameState.START_OF_ROUND
-                    self.current_action = self.desk.get_current_action(state=self.current_state)
-                    return None
-                # TODO: Handle token selection for privilege use
+                match button.action:
+                    case "cancel":
+                        self.current_state = GameState.START_OF_ROUND
+                        self.current_selection.clear()
+                        self.current_action = self.desk.get_current_action(state=self.current_state)
+                        return None
+                    case "confirm":
+                        if len(self.current_selection) != 1:
+                            self.dialogue = "Must select exactly 1 token"
+                            return None
+                        self.current_state = GameState.START_OF_ROUND
+                        action = Action(ActionType.USE_PRIVILEGE, {"token": self.current_selection[0].element, "position": self.current_selection[0].metadata["position"]})
+                        self.current_selection.clear()
+                        self.current_action = self.desk.get_current_action(state=self.current_state)
+                        return action
                 
             case GameState.REPLENISH_BOARD:
                 if button.action == "confirm_replenish":
@@ -172,6 +228,8 @@ class GameController:
                     self.current_state = GameState.START_OF_ROUND
                     self.current_action = self.desk.get_current_action(state=self.current_state)
                     return None
+                elif button.action == "confirm":
+                    pass
                 # TODO: Handle token selection for taking tokens
                 
             case GameState.TAKE_GOLD_AND_RESERVE:
@@ -196,6 +254,8 @@ class GameController:
                 elif button.action == "rollback_to_start":
                     # Roll back to start_of_round
                     self.current_state = GameState.START_OF_ROUND
+                    # restore the desk to the start of round
+                    self.desk = self.desk_snapshot.deepcopy()
                     self.current_action = self.desk.get_current_action(state=self.current_state)
                     return None
         
@@ -347,10 +407,14 @@ if __name__ == '__main__':
         initial_privileges=cfg.get('privileges',3),
         asset_path='data/images'
     )
+    player1 = PlayerState("Player 1")
+    player1.privileges = 3
+    player2 = PlayerState("Player 2")
+    ctrl.desk.add_player(player1, player2)
 
     # add artificial player data for testing
-    ctrl.desk.board.fill_grid(ctrl.desk.bag.draw())
-    ctrl.desk.players[0].privileges = 3
+    # ctrl.desk.board.fill_grid(ctrl.desk.bag.draw())
+        # ctrl.desk.players[0].privileges = 3
     # ctrl.desk.players[0].tokens['black'] = 2
     # ctrl.desk.players[0].tokens['red'] = 1
     # ctrl.desk.players[0].tokens['green'] = 1

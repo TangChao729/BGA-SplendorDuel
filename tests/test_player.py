@@ -29,7 +29,7 @@ def make_card(
 
 
 def test_token_management():
-    p = PlayerState()
+    p = PlayerState("Player 1")
     # Add tokens
     p.add_tokens([Token("black"), Token("black"), Token("gold")])
     assert p.tokens.get(Token("black")) == 2
@@ -44,7 +44,7 @@ def test_token_management():
 
 
 def test_can_afford_with_bonus_and_gold():
-    p = PlayerState()
+    p = PlayerState("Player 1")
     # Setup tokens and bonuses
     p.tokens[Token("red")] = 1
     p.bonuses[Token("red")] = 1  # cover cost partially
@@ -60,7 +60,7 @@ def test_can_afford_with_bonus_and_gold():
 
 
 def test_pay_for_card_and_effects():
-    p = PlayerState()
+    p = PlayerState("Player 1")
     # Give tokens
     p.tokens[Token("white")] = 2
     p.tokens[Token("gold")] = 1
@@ -87,7 +87,7 @@ def test_pay_for_card_and_effects():
 
 
 def test_reserve_and_privileges():
-    p = PlayerState()
+    p = PlayerState("Player 1")
     card = make_card()
     for i in range(3):
         assert p.reserve_card(card)
@@ -126,8 +126,7 @@ def test_has_won_conditions():
 def test_json_serialization():
     """Test JSON serialization and deserialization of PlayerState."""
     # Create a player with various data
-    p = PlayerState()
-    p.name = "Test Player"
+    p = PlayerState("Test Player")
     p.tokens[Token("black")] = 3
     p.tokens[Token("gold")] = 2
     p.bonuses[Token("red")] = 1
@@ -168,8 +167,7 @@ def test_json_serialization():
 def test_json_file_operations(tmp_path):
     """Test saving and loading PlayerState to/from files."""
     # Create a player with some data
-    p = PlayerState()
-    p.name = "File Test Player"
+    p = PlayerState("File Test Player")
     p.tokens[Token("white")] = 5
     p.points = 12
     
@@ -189,7 +187,7 @@ def test_json_file_operations(tmp_path):
 
 def test_json_with_empty_player():
     """Test JSON operations with a fresh, empty player."""
-    p = PlayerState()
+    p = PlayerState("Empty Player")
     
     # Serialize empty player
     json_data = p.to_json()
