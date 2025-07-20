@@ -48,7 +48,7 @@ class Bag(Piece):
         - counts(): current counts of tokens.
     """
 
-    def __init__(self, initial_counts: Dict[Token, int]):
+    def __init__(self, initial_counts: Dict[Token, int] = {}):
         """
         Args:
             initial_counts: map from token color to starting count.
@@ -159,8 +159,9 @@ class Board(Piece):
         elif len(tokens) < 0:
             raise ValueError("Cannot fill grid with negative number of tokens")
         else:
-            for (r, c), token in zip(self._spiral_coords, tokens):
-                self.grid[r][c] = token
+            for r, c in self._spiral_coords:
+                if self.grid[r][c] is None and len(tokens) > 0:
+                    self.grid[r][c] = tokens.pop(0)
 
     def privileges_draws(self) -> Dict[Token, List[Tuple[int, int]]]:
         """

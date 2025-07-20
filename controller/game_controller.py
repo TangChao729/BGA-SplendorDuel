@@ -8,6 +8,7 @@ from typing import Tuple, Optional, List
 from model.desk import Desk           # desk.py is in model/ directory
 from model.player import PlayerState
 from model.tokens import Token
+from model.cards import Card
 from model.actions import ActionType, Action, GameState, CurrentAction, ActionButton  # actions.py is in model/ directory
 from view.assets import AssetManager  # assets.py is in view/ directory
 from view.game_view import GameView   # game_view.py is in view/ directory
@@ -64,19 +65,16 @@ class GameController:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     action = self._interpret_click(event.pos)
                     if action:
-                        try:
-                            self.desk.apply_action(action)
-                            # self.selected_tokens.clear()
-                            # self.selected_cards.clear()
-                            self.dialogue = f"Action executed: {action.type.name}"
-                            # After a mandatory action, go to post_action_checks state
-                            # self.current_state = GameState.POST_ACTION_CHECKS
-                            # self.current_action = self.desk.get_current_action(state=self.current_state)
-                            # self.pending_action_button = None
-                            # self.info_message = ""
-                            # self.pending_action = None
-                        except Exception as e:
-                            self.dialogue = str(e)
+                        self.desk.apply_action(action)
+                        # self.selected_tokens.clear()
+                        # self.selected_cards.clear()
+                        self.dialogue = f"Action executed: {action.type.name}"
+                        # After a mandatory action, go to post_action_checks state
+                        # self.current_state = GameState.POST_ACTION_CHECKS
+                        # self.current_action = self.desk.get_current_action(state=self.current_state)
+                        # self.pending_action_button = None
+                        # self.info_message = ""
+                        # self.pending_action = None
             # Pass current_action to GameView
             self.view.render(self.desk, self.dialogue, self.current_action, self.current_selection)
             self.clock.tick(30)
@@ -115,7 +113,8 @@ class GameController:
                     else:
                         self.current_selection.remove(element)
                 else:
-                    self.dialogue = f"Cannot select {element.name} in {self.current_state.name}"
+                    # self.dialogue = f"Cannot select {element.name} in {self.current_state.name}"
+                    self.dialogue = f"element: {element.element}"
                     return None
                 
             # During privilege use, only token and only one token can be selected
@@ -134,6 +133,22 @@ class GameController:
                     self.dialogue = f"Cannot select {element.name} in {self.current_state.name}"
                     return None
                 
+            # During purchase card, only cards can be selected
+            case GameState.PURCHASE_CARD:
+                allowed_selections = [Card]
+                if element.element_type in allowed_selections:
+                    if element not in self.current_selection:
+                        if len(self.current_selection) < 1:
+                            self.current_selection.append(element)
+                        else:
+                            self.dialogue = "Cannot select more than 1 card"
+                            return None
+                    else:
+                        self.current_selection.remove(element)
+                else:
+                    self.dialogue = f"Cannot select {element.name} in {self.current_state.name}"
+                    return None
+
             # During take tokens, only tokens can be selected
             case GameState.TAKE_TOKENS:
                 allowed_selections = [Token]
@@ -225,9 +240,22 @@ class GameController:
             case GameState.PURCHASE_CARD:
                 if button.action == "cancel":
                     self.current_state = GameState.START_OF_ROUND
+                    self.current_selection.clear()
                     self.current_action = self.desk.get_current_action(state=self.current_state)
                     return None
-                # TODO: Handle card selection for purchase
+                elif button.action == "confirm":
+                    if len(self.current_selection) != 1:
+                        self.dialogue = "Must select exactly 1 card"
+                        return None
+                    selected_card: Card = self.current_selection[0].element
+                    if not self.desk.current_player.can_afford(selected_card):
+                        self.dialogue = "Cannot afford card"
+                        return None
+                    self.current_state = GameState.POST_ACTION_CHECKS
+                    action = Action(ActionType.PURCHASE_CARD, {"card": selected_card, "level": self.current_selection[0].metadata["level"], "index": self.current_selection[0].metadata["index"]})
+                    self.current_selection.clear()
+                    self.current_action = self.desk.get_current_action(state=self.current_state)
+                    return action
                 
             case GameState.TAKE_TOKENS:
                 if button.action == "cancel":
@@ -277,6 +305,8 @@ class GameController:
                 if button.action == "finish_round":
                     # End the round, switch player, reset state
                     self.current_state = GameState.START_OF_ROUND
+                    self.current_selection.clear()
+                    self.desk.next_player()
                     self.current_action = self.desk.get_current_action(state=self.current_state)
                     return None
                 elif button.action == "rollback_to_start":
@@ -442,6 +472,10 @@ if __name__ == '__main__':
 
     # add artificial player data for testing
     ctrl.desk.board.fill_grid(ctrl.desk.bag.draw())
+    ctrl.desk.board.grid[0][0] = None
+    ctrl.desk.board.grid[0][1] = None
+    ctrl.desk.board.grid[1][1] = None
+    player1.tokens = {Token('red'): 3}
         # ctrl.desk.players[0].privileges = 3
     # ctrl.desk.players[0].tokens['black'] = 2
     # ctrl.desk.players[0].tokens['red'] = 1

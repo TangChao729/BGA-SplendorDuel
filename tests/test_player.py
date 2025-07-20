@@ -1,7 +1,7 @@
 import pytest
 from model.player import PlayerState
 from model.cards import Card
-from model.tokens import Token
+from model.tokens import Token, Bag
 
 
 def make_card(
@@ -15,7 +15,7 @@ def make_card(
     cost=None,
 ):
     if cost is None:
-        cost = {c: 0 for c in ["black", "red", "green", "blue", "white", "pearl"]}
+        cost = {Token(c): 0 for c in ["black", "red", "green", "blue", "white", "pearl"]}
     return Card(
         id=id,
         level=level,
@@ -73,7 +73,7 @@ def test_pay_for_card_and_effects():
         cost={Token("white"): 2, Token("black"): 0, Token("red"): 0, Token("green"): 0, Token("blue"): 0, Token("pearl"): 0},
     )
     assert p.can_afford(card)
-    p.pay_for_card(card)
+    p.pay_for_card(card, Bag())
     # Check tokens used
     assert p.tokens[Token("white")] == 0
     assert p.tokens[Token("gold")] == 1  # no wild used

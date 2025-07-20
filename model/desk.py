@@ -178,7 +178,7 @@ class Desk:
                     card = self.pyramid.get_card(level, idx)
                     self.pyramid.fill_card(level, idx)
 
-                player.pay_for_card(card)
+                player.pay_for_card(card, self.bag)
 
         # TODO: handle victory and turn advance in the controller
         # # After any action, check victory
@@ -260,7 +260,7 @@ class Desk:
             case GameState.PURCHASE_CARD:
                 explanation = "Select a card to purchase:"
                 buttons = []
-                # TODO: Add card selection buttons based on affordable cards
+                buttons.append(ActionButton("Confirm", "confirm"))
                 buttons.append(ActionButton("Cancel", "cancel"))
                 return CurrentAction(GameState.PURCHASE_CARD, explanation, buttons)
                 

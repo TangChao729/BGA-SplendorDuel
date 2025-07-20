@@ -99,6 +99,12 @@ class GameView:
         for element in current_selection:
             self._highlight_rect(element.rect)
 
+        # highlight the current player
+        if desk.current_player_index == 0:
+            self._highlight_rect(self.right_split.children["player1"])
+        else:
+            self._highlight_rect(self.right_split.children["player2"])
+
         pygame.display.flip()
 
     def _scale_image_to_fit(
@@ -342,7 +348,7 @@ class GameView:
         self.screen.blit(card_surface, (rect.x, rect.y))
         pygame.draw.rect(self.screen, BLACK, rect, width=BORDER_WIDTH, border_radius=border_radius)
 
-    def _draw_card_area(self, bonuses: Dict[str, int], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_card_area(self, bonuses: Dict[Token, int], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
         """
         Draw the player's card bonuses as colored card shapes with counts.
         """
@@ -376,7 +382,7 @@ class GameView:
                 card_rect.height - 2 * margin
             )
             self._draw_card_shape(card_rect, color_map[color], alpha=ALPHA_SEMI, border_radius=8)
-            bonus_count = bonuses.get(color, 0)
+            bonus_count = bonuses.get(Token(color), 0)
             txt = self.font.render(str(bonus_count), True, BLACK)
             txt_rect = txt.get_rect(center=card_rect.center)
             self.screen.blit(txt, txt_rect)
@@ -411,7 +417,7 @@ class GameView:
                 f"reserved_card_{i}",
                 pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
                 card,
-                {"index": i}
+                {"reserved_index": i}
             )
 
     def draw_main_panel(self, desk: Desk, dialogue: str, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
@@ -582,10 +588,10 @@ class GameView:
         self._draw_boarder(split.children["reminder"])
         self._draw_boarder(split.children["token_grid"])
         split.children["token_grid"] = Margin(split.children["token_grid"], (MARGIN_LARGE,)*4).rect
-        token_grid_row_split = HSplit(split.children["token_grid"], [(f"row_{i+1}", 1) for i in range(5)])
+        token_grid_row_split = VSplit(split.children["token_grid"], [(f"row_{i+1}", 1) for i in range(5)])
         for row_idx in range(5):
             row_rect = token_grid_row_split.children[f"row_{row_idx+1}"]
-            col_split = VSplit(row_rect, [
+            col_split = HSplit(row_rect, [
                 (f"col_{i+1}", 1) for i in range(5)
             ])
             for col_idx in range(5):
@@ -624,7 +630,7 @@ class GameView:
         # Draw face-down cards
         for i in range(3):
             x, y, w, h = face_down_rect.children[f"level_{i+1}"]
-            card_sprite = self.assets.get_card_sprite(level=3-i, index=0) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[3-i][0]
+            card_sprite = self.assets.get_card_sprite(level=3-i, index=0)
             scaled_card, (x, y) = self._scale_image_to_fit(
                 card_sprite,
                 pygame.Rect(x, y, w, h),
@@ -657,8 +663,14 @@ class GameView:
         
         def draw_face_up_card(card_amt: int, face_up_level_rects: List[pygame.Rect], level: int):
             for i in range(card_amt):
+                card = desk.pyramid.slots[level][i] if i < len(desk.pyramid.slots[level]) else None
+                if card is None:
+                    continue
+                
+                # TODO: this looks messy, need to clean, why i+1?
                 x, y, w, h = face_up_level_rects[f"{i+1}"]
-                card_sprite = self.assets.get_card_sprite(level=level, index=i+1) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[level][i+1]
+                card_id = card.id[-2:]
+                card_sprite = self.assets.get_card_sprite(level=level, index=int(card_id))
                 scaled_card, (x, y) = self._scale_image_to_fit(
                     card_sprite,
                     pygame.Rect(x, y, scaled_card_width, h),
@@ -667,10 +679,10 @@ class GameView:
                 self.screen.blit(scaled_card, (x, y))
                 card = desk.pyramid.slots[level][i] if i < len(desk.pyramid.slots[level]) else None
                 self.layout_registry.register(
-                    f"pyramid_card_{level}_{i+1}",
+                    f"pyramid_card_{level}_{i}",
                     pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
                     card,
-                    {"level": level, "index": i+1}
+                    {"level": level, "index": i}
                 )
 
         face_up_level_1 = layout_face_up(1, 5, face_up_rect.children["level_1"])
