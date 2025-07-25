@@ -9,7 +9,8 @@ from model.desk import Desk           # desk.py is in model/ directory
 from model.player import PlayerState
 from model.tokens import Token
 from model.cards import Card
-from model.actions import ActionType, Action, GameState, GameStateMachine, CurrentAction, ActionButton  # actions.py is in model/ directory
+from model.actions import ActionType, Action, ActionButton  # Basic action classes
+from model.game_state_machine import GameState, GameStateMachine, CurrentAction  # State machine classes
 from view.assets import AssetManager  # assets.py is in view/ directory
 from view.game_view import GameView   # game_view.py is in view/ directory
 from view.layout import LayoutElement

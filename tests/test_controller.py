@@ -6,7 +6,8 @@ from unittest.mock import Mock, patch, MagicMock
 from typing import List, Tuple, Optional
 
 from controller.game_controller import GameController
-from model.actions import GameState, ActionType, Action
+from model.actions import ActionType, Action
+from model.game_state_machine import GameState
 from model.cards import Card
 from model.player import PlayerState
 from model.tokens import Token

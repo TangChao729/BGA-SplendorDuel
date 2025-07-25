@@ -8,7 +8,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from model.cards import Deck, Pyramid, Royal, Card
 from model.tokens import Bag, Board, Token
 from model.player import PlayerState
-from model.actions import ActionType, Action, GameState, CurrentAction, ActionButton
+from model.actions import ActionType, Action, ActionButton
+from model.game_state_machine import GameState, CurrentAction
 
 
 class Desk:
