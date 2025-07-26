@@ -20,12 +20,12 @@ def test_create_card_from_dict():
         "ability": None,
         "crowns": 0,
         "cost": {
-            Token("black"): 1,
-            Token("red"): 0,
-            Token("green"): 0,
-            Token("blue"): 0,
-            Token("white"): 0,
-            Token("pearl"): 0,
+            "black": 1,
+            "red": 0,
+            "green": 0,
+            "blue": 0,
+            "white": 0,
+            "pearl": 0,
         },
     }
     c = Card.from_dict(data)
@@ -37,7 +37,14 @@ def test_create_card_from_dict():
     assert c.bonus == 1
     assert c.ability is None
     assert c.crowns == 0
-    assert c.cost == data["cost"]
+    assert c.cost == {
+        Token("black"): 1,
+        Token("red"): 0,
+        Token("green"): 0,
+        Token("blue"): 0,
+        Token("white"): 0,
+        Token("pearl"): 0,
+    }
     # Round-trip to dict
     assert c.to_dict() == data
 

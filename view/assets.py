@@ -116,6 +116,9 @@ class AssetManager:
         # Cards svg icon
         self.icon_cards_stack_svg = self._load_image("cards.svg")
 
+    def get_card_sprite(self, level: int, index: int) -> pygame.Surface:
+        return self.card_sprites[level][index]
+
 if __name__ == "__main__":
     # Example usage
     pygame.init()

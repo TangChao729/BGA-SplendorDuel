@@ -2,7 +2,7 @@ import json
 from typing import Dict, List, Optional, Any
 
 from model.cards import Card
-from model.tokens import Token
+from model.tokens import Token, Bag
 
 
 class PlayerState:
@@ -19,8 +19,8 @@ class PlayerState:
         points (int): Total prestige points scored.
     """
 
-    def __init__(self) -> None:
-        self.name: Optional[str] = "Player 21:07"
+    def __init__(self, name: str = "default") -> None:
+        self.name: Optional[str] = name
         # token colors: black, red, green, blue, white, pearl, gold (wild)
         self.tokens: Dict[Token, int] = {
             Token(c): 0 for c in ["black", "red", "green", "blue", "white", "pearl", "gold"]
@@ -77,7 +77,7 @@ class PlayerState:
         # wild tokens (pearl) can cover shortage
         return total_short <= self.tokens.get(Token("gold"), 0)
 
-    def pay_for_card(self, card: Card) -> None:
+    def pay_for_card(self, card: Card, bag: Bag) -> None:
         """
         Deduct tokens to pay for the card, apply its bonuses, crowns, and points.
         Assumes can_afford(card) is True.
@@ -98,10 +98,12 @@ class PlayerState:
         to_remove[Token("gold")] = shortage
         # Remove tokens
         self.remove_tokens(to_remove)
+        for token, value in to_remove.items():
+            bag.return_tokens([token] * value)
         # Acquire card
         self.purchased.append(card)
         # Update bonuses, points, crowns
-        self.bonuses[Token(card.color)] = self.bonuses.get(Token(card.color), 0) + 1
+        self.bonuses[Token(card.color.lower())] = self.bonuses.get(Token(card.color), 0) + 1
         self.points += card.points
         self.crowns += card.crowns
 

@@ -1,32 +1,39 @@
 import pygame
-from typing import Dict, List, Tuple, Any, Union, Optional
-from view.layout import HSplit, VSplit, Margin, layout_registry
+from typing import List, Optional, Dict, Any, Tuple, Union
+import os
 
 from model.desk import Desk
+from model.actions import ActionButton
+from model.game_state_machine import CurrentAction
+from model.cards import Card
+from model.tokens import Token
 from view.assets import AssetManager
-from model.actions import CurrentAction, ActionButton
+from view.layout import LayoutRegistry, LayoutElement, HSplit, VSplit, Margin
 
 # Layout constants
-SCREEN_WIDTH = 1900
-SCREEN_HEIGHT = 1000
-MAIN_PANEL_HEIGHT = 850
-DIALOGUE_HEIGHT = SCREEN_HEIGHT - MAIN_PANEL_HEIGHT
-
-# UI constants
 MARGIN_SMALL = 5
 MARGIN_MEDIUM = 10
 MARGIN_LARGE = 20
+PADDING = 5
+BORDER_WIDTH = 2
+BORDER_RADIUS_DEFAULT = 10
+SCREEN_WIDTH, SCREEN_HEIGHT = 1900, 1000
+MAIN_PANEL_HEIGHT = 850
+DIALOGUE_HEIGHT = SCREEN_HEIGHT - MAIN_PANEL_HEIGHT
 ALPHA_SEMI = 128
+ALPHA_VERY_LOW = 32
 FONT_SIZE_DEFAULT = 24
 FONT_SIZE_TRACKER = 30
-BORDER_RADIUS_DEFAULT = 10
-BORDER_WIDTH = 2
 
-# Colors
-WHITE = (255, 255, 255)  # Semi-transparent white for backgrounds
+# UI constants
 BLACK = (0, 0, 0)
-GRAY = (200,200,200)
-RED = (255, 0, 0)
+WHITE = (255, 255, 255)
+LIGHT_GRAY = (200, 200, 200)
+GRAY = (128, 128, 128)
+BLUE = (0, 100, 200)
+GREEN = (0, 200, 0)
+RED = (200, 0, 0)
+YELLOW = (255, 255, 0)
 
 
 def to_rect(rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> pygame.Rect:
@@ -35,12 +42,13 @@ def to_rect(rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> pygame.Rect:
     """
     if isinstance(rect, pygame.Rect):
         return rect
-    return pygame.Rect(*rect)
+    else:
+        return pygame.Rect(rect)
 
 
 class ScaledImageCache:
     """
-    Caches scaled images to avoid redundant scaling operations.
+    Cache for scaled images to avoid recomputing them on each frame.
     """
     def __init__(self):
         self.cache: Dict[Tuple[int, int, int, int, int], pygame.Surface] = {}
@@ -68,7 +76,7 @@ class GameView:
         self.font = pygame.font.SysFont(None, FONT_SIZE_DEFAULT)
         self.tracker_font = pygame.font.SysFont(None, FONT_SIZE_TRACKER)
         self.scaled_image_cache = ScaledImageCache()
-
+        self.layout_registry = LayoutRegistry()
         # main panel
         self.view_split = HSplit(
             (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), [("main", 9), ("right", 2)]
@@ -80,23 +88,34 @@ class GameView:
             [("player1", 1), ("player2", 1)],
         )
 
-    def render(self, desk: Desk, dialogue: str, current_action: CurrentAction) -> None:
+    def render(self, desk: Desk, dialogue: str, current_action: CurrentAction, current_selection: List[LayoutElement]) -> None:
         """
         Render the entire game view, including background, main panel, and player panels.
         """
         # Clear the layout registry at the start of each frame
-        layout_registry.clear()
+        self.layout_registry.clear()
         
         self.draw_background()
         self.draw_main_panel(desk, dialogue, self.view_split.children["main"])
         self.draw_player_panel(desk.players[0], self.right_split.children["player1"])
         self.draw_player_panel(desk.players[1], self.right_split.children["player2"])
-        self._draw_action_panel(desk, self.action_panel_rect, current_action)
+        self.draw_action_panel(desk, self.action_panel_rect, current_action)
+
+        # highlight the selected element
+        for element in current_selection:
+            self._highlight_rect(element.rect)
+
+        # highlight the current player
+        if desk.current_player_index == 0:
+            self._highlight_rect(self.right_split.children["player1"])
+        else:
+            self._highlight_rect(self.right_split.children["player2"])
+
         pygame.display.flip()
 
     def _scale_image_to_fit(
-        self, image: pygame.Surface, rect: Union[Tuple[int, int, int, int], pygame.Rect], margin: int = MARGIN_MEDIUM
-    ) -> Tuple[pygame.Surface, Tuple[int, int]]:
+        self, image: pygame.Surface, rect: Any, margin: int = MARGIN_MEDIUM
+    ) -> Any:
         """
         Scale an image to fit within a rectangle while maintaining aspect ratio.
         Returns the scaled image and its position (x, y) to center it in the rect.
@@ -135,7 +154,7 @@ class GameView:
         )
         self.screen.blit(bg, (0, 0))
 
-    def draw_player_panel(self, player: Any, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def draw_player_panel(self, player: Any, rect: Any) -> None:
         """
         Draw the player panel, including name, score, counters, tokens, cards, and reserved cards.
         """
@@ -170,7 +189,7 @@ class GameView:
         self._draw_card_area(player.bonuses, Margin(player_panel.children["cards_sum"], (MARGIN_SMALL,)*4).rect)
         self._draw_reserved_cards(player.reserved, Margin(player_panel.children["reserved"], (MARGIN_SMALL,)*4).rect)
 
-    def _draw_player_name(self, player: Any, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_player_name(self, player: Any, rect: Any) -> None:
         """
         Draw the player's name in the given rectangle.
         """
@@ -179,7 +198,7 @@ class GameView:
         txt = self.font.render(player.name, True, BLACK)
         self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, rect.y + MARGIN_MEDIUM))
 
-    def _draw_score_tracker(self, player: Any, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_score_tracker(self, player: Any, rect: Any) -> None:
         """
         Draw the score tracker for the player.
         """
@@ -198,7 +217,7 @@ class GameView:
         self._draw_player_crowns(player, upper_half_split.children["crowns"])
         self._draw_player_card_points(player, upper_half_split.children["card_points"])
 
-    def _draw_player_points(self, player: Any, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_player_points(self, player: Any, rect: Any) -> None:
         """
         Draw the player's points, right-aligned in the given rectangle.
         """
@@ -211,7 +230,7 @@ class GameView:
         y = rect.y + MARGIN_MEDIUM
         self.screen.blit(txt, (x, y))
 
-    def _draw_player_crowns(self, player: Any, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_player_crowns(self, player: Any, rect: Any) -> None:
         """
         Draw the player's crowns, centered in the given rectangle.
         """
@@ -221,7 +240,7 @@ class GameView:
         txt_rect = txt.get_rect(center=rect.center)
         self.screen.blit(txt, txt_rect)
 
-    def _draw_player_card_points(self, player: Any, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_player_card_points(self, player: Any, rect: Any) -> None:
         """
         Draw the player's card points.
         """
@@ -231,7 +250,7 @@ class GameView:
         txt = self.tracker_font.render(f"{highest_points}", True, WHITE)
         self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, rect.y + MARGIN_MEDIUM))
 
-    def _draw_privilege_royal_token_counter(self, player: Any, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_privilege_royal_token_counter(self, player: Any, rect: Any) -> None:
         """
         Draw counters for privileges, royals, and tokens.
         """
@@ -287,7 +306,7 @@ class GameView:
             ),
         )
 
-    def _draw_token(self, counts: Dict[str, int], split: Any, color: str) -> None:
+    def _draw_token(self, counts: Dict[Any, int], split: Any, color: str) -> None:
         """
         Draw a single token of the given color and its count.
         """
@@ -295,7 +314,7 @@ class GameView:
             self.assets.token_sprites[color], split.children[color], margin=MARGIN_SMALL
         )
         self.screen.blit(sclaled_token, to_rect(split.children[color])[:2])
-        txt_gold = self.tracker_font.render(f":{str(counts.get(color, 0))}", True, BLACK)
+        txt_gold = self.tracker_font.render(f":{str(counts.get(Token(color), 0))}", True, BLACK)
         self.screen.blit(
             txt_gold,
             (
@@ -304,7 +323,7 @@ class GameView:
             ),
         )
 
-    def _draw_token_area(self, counts: Dict[str, int], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_token_area(self, counts: Dict[Any, int], rect: Any) -> None:
         """
         Draw all tokens for a player in a grid layout.
         """
@@ -325,7 +344,7 @@ class GameView:
         for color in ["black", "blue", "red", "green", "white"]:
             self._draw_token(counts, second_row_split, color)
 
-    def _draw_card_shape(self, rect: pygame.Rect, fill_color: Tuple[int, int, int] = WHITE, alpha: int = ALPHA_SEMI, border_radius: int = BORDER_RADIUS_DEFAULT) -> None:
+    def _draw_card_shape(self, rect: pygame.Rect, fill_color: Any = WHITE, alpha: int = ALPHA_SEMI, border_radius: int = BORDER_RADIUS_DEFAULT) -> None:
         """
         Draw a card shape with rounded corners, transparent fill, and black border.
         """
@@ -335,7 +354,7 @@ class GameView:
         self.screen.blit(card_surface, (rect.x, rect.y))
         pygame.draw.rect(self.screen, BLACK, rect, width=BORDER_WIDTH, border_radius=border_radius)
 
-    def _draw_card_area(self, bonuses: Dict[str, int], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_card_area(self, bonuses: Dict[Any, int], rect: Any) -> None:
         """
         Draw the player's card bonuses as colored card shapes with counts.
         """
@@ -369,45 +388,46 @@ class GameView:
                 card_rect.height - 2 * margin
             )
             self._draw_card_shape(card_rect, color_map[color], alpha=ALPHA_SEMI, border_radius=8)
-            bonus_count = bonuses.get(color, 0)
+            bonus_count = bonuses.get(Token(color), 0)
             txt = self.font.render(str(bonus_count), True, BLACK)
             txt_rect = txt.get_rect(center=card_rect.center)
             self.screen.blit(txt, txt_rect)
 
-    def _draw_reserved_cards(self, reserved: List[Any], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_reserved_cards(self, reserved: List[Card], rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
         """
         Draw the player's reserved cards in a row.
         """
         rect = to_rect(rect)
-        self._draw_boarder(rect)
         if not reserved:
-            return
-        split = HSplit(
-            rect,
-            [("card1", 1), ("card2", 1), ("card3", 1)]
-        )
-        for i, card in enumerate(reserved):
-            if i >= 3:
-                break
-            card_rect = to_rect(split.children[f"card{i+1}"])
-            # Use asset helper for reserved card sprite
-            card_sprite = self.assets.get_card_sprite(level=1, index=10) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[1][10]
-            scaled_card, (x, y) = self._scale_image_to_fit(
-                card_sprite,
-                card_rect,
-                margin=MARGIN_SMALL
-            )
-            self.screen.blit(scaled_card, (x, y))
-            
-            # Register the reserved card for click detection
-            layout_registry.register(
-                f"reserved_card_{i}",
-                card_rect,
-                "reserved_card",
-                {"index": i, "card": card}
-            )
+            # Draw empty slots
+            for i in range(3):
+                x = rect.x + i * (rect.width // 3)
+                card_rect = pygame.Rect(x, rect.y, rect.width // 3 - MARGIN_SMALL, rect.height)
+                self._draw_card_shape(card_rect, alpha=ALPHA_VERY_LOW)
+        else:
+            for i, card in enumerate(reserved):
+                if i >= 3:  # Limit to 3 reserved cards
+                    break
+                x = rect.x + i * (rect.width // 3)
+                card_rect = pygame.Rect(x, rect.y, rect.width // 3 - MARGIN_SMALL, rect.height)
+                
+                scaled_image, position = self._scale_image_to_fit(
+                    self.assets.card_backgrounds[card.color], card_rect, MARGIN_SMALL
+                )
+                self.screen.blit(scaled_image, position)
+                
+                # Register the card for click detection
+                self.layout_registry.register(
+                    LayoutElement(
+                        name=f"reserved_card_{i}",
+                        rect=card_rect,
+                        element=card,
+                        element_type=type(card),
+                        metadata={"index": i, "card": card}
+                    )
+                )
 
-    def draw_main_panel(self, desk: Desk, dialogue: str, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def draw_main_panel(self, desk: Desk, dialogue: str, rect: Any) -> None:
         """
         Draw the main game panel, including bag, privileges, royals, dialogue, board, and pyramid.
         """
@@ -427,13 +447,13 @@ class GameView:
         self._draw_board(desk, Margin(lower_split.children["board"], (MARGIN_MEDIUM,)*4).rect)
         self._draw_pyramid(desk, Margin(lower_split.children["pyramid"], (MARGIN_MEDIUM,)*4).rect)
 
-    def _draw_action_panel(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect], current_action: CurrentAction) -> None:
+    def draw_action_panel(self, desk: Desk, rect: Any, current_action: CurrentAction) -> None:
         """
         Draw the action panel with explanation and action buttons in one horizontal line.
         """
         rect = to_rect(rect)
         self._draw_boarder(rect)
-        pygame.draw.rect(self.screen, GRAY, rect)
+        pygame.draw.rect(self.screen, LIGHT_GRAY, rect)
         
         # Calculate total width needed for text and buttons
         txt = self.font.render(current_action.explanation, True, BLACK)
@@ -473,10 +493,10 @@ class GameView:
             pygame.draw.rect(self.screen, (30, 90, 200), btn_rect, border_radius=10)
             self.screen.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
             # Register button for click detection
-            layout_registry.register(f"action_button_{i}", btn_rect, "action_button", {"button": button})
+            self.layout_registry.register(f"action_button_{i}", btn_rect, button, {})
             current_x += btn_width + spacing
 
-    def _draw_bag(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_bag(self, desk: Desk, rect: Any) -> None:
         """
         Draw the bag image and the number of tokens in the bag.
         """
@@ -494,14 +514,14 @@ class GameView:
         self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, rect.y + rect.height - text_height))
 
         # Register the bag for click detection
-        layout_registry.register(
+        self.layout_registry.register(
             "bag",
-            rect,
-            "bag",
-            {"desk": desk}
+            pygame.Rect(x, y, scaled_bag.get_width(), scaled_bag.get_height()),
+            desk.bag,
+            {},
         )
 
-    def _draw_privileges(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_privileges(self, desk: Desk, rect: Any) -> None:
         """
         Draw the privilege tokens in the main panel.
         """
@@ -517,15 +537,16 @@ class GameView:
                 )
                 self.screen.blit(scaled_privilege, (x, y))
                 
-                # Register privilege for click detection
-                layout_registry.register(
-                    f"privilege_{i}",
-                    sub_rect,
-                    "privilege",
-                    {"index": i}
-                )
+                # Privilege is not clickable
+                # # Register privilege for click detection
+                # self.layout_registry.register(
+                #     f"privilege_{i}",
+                #     pygame.Rect(x, y, scaled_privilege.get_width(), scaled_privilege.get_height()),
+                #     "privilege",
+                #     {"index": i}
+                # )
 
-    def _draw_royal(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_royal(self, desk: Desk, rect: Any) -> None:
         """
         Draw the royal cards in the main panel.
         """
@@ -542,15 +563,16 @@ class GameView:
                 )
                 self.screen.blit(scaled_royal, (x, y))
                 
-                # Register royal card for click detection
-                layout_registry.register(
-                    f"royal_{i}",
-                    sub_rect,
-                    "royal",
-                    {"index": i, "card": desk.royals[i]}
-                )
+                # Royal card is not clickable
+                # # Register royal card for click detection
+                # self.layout_registry.register(
+                #     f"royal_{i}",
+                #     pygame.Rect(x, y, scaled_royal.get_width(), scaled_royal.get_height()),
+                #     desk.royals[i],
+                #     {"index": i}
+                # )
 
-    def _draw_dialogue_panel(self, text: str, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_dialogue_panel(self, text: str, rect: Any) -> None:
         """
         Draw the dialogue panel with the given text.
         """
@@ -559,7 +581,7 @@ class GameView:
         txt = self.font.render(text, True, BLACK)
         self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, rect.y + MARGIN_MEDIUM))
 
-    def _draw_board(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_board(self, desk: Desk, rect: Any) -> None:
         """
         Draw the main game board, including the token grid and any tokens present.
         """
@@ -573,10 +595,10 @@ class GameView:
         self._draw_boarder(split.children["reminder"])
         self._draw_boarder(split.children["token_grid"])
         split.children["token_grid"] = Margin(split.children["token_grid"], (MARGIN_LARGE,)*4).rect
-        token_grid_row_split = HSplit(split.children["token_grid"], [(f"row_{i+1}", 1) for i in range(5)])
+        token_grid_row_split = VSplit(split.children["token_grid"], [(f"row_{i+1}", 1) for i in range(5)])
         for row_idx in range(5):
             row_rect = token_grid_row_split.children[f"row_{row_idx+1}"]
-            col_split = VSplit(row_rect, [
+            col_split = HSplit(row_rect, [
                 (f"col_{i+1}", 1) for i in range(5)
             ])
             for col_idx in range(5):
@@ -590,14 +612,14 @@ class GameView:
                     self.screen.blit(scaled_token, (tx, ty))
                     
                     # Register token for click detection
-                    layout_registry.register(
+                    self.layout_registry.register(
                         f"token_{row_idx}_{col_idx}",
-                        margin_rect,
-                        "token",
-                        {"row": row_idx, "col": col_idx, "color": token.color, "token": token}
+                        pygame.Rect(tx, ty, scaled_token.get_width(), scaled_token.get_height()),
+                        token,
+                        {"position": (row_idx, col_idx)}
                     )
 
-    def _draw_pyramid(self, desk: Desk, rect: Union[Tuple[int, int, int, int], pygame.Rect]) -> None:
+    def _draw_pyramid(self, desk: Desk, rect: Any) -> None:
         """
         Draw the card pyramid in the main panel.
         """
@@ -615,7 +637,7 @@ class GameView:
         # Draw face-down cards
         for i in range(3):
             x, y, w, h = face_down_rect.children[f"level_{i+1}"]
-            card_sprite = self.assets.get_card_sprite(level=3-i, index=0) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[3-i][0]
+            card_sprite = self.assets.get_card_sprite(level=3-i, index=0)
             scaled_card, (x, y) = self._scale_image_to_fit(
                 card_sprite,
                 pygame.Rect(x, y, w, h),
@@ -623,6 +645,15 @@ class GameView:
             )
             self.screen.blit(scaled_card, (x, y))
             scaled_card_width = scaled_card.get_width()
+
+            # Register face-down card for click detection
+            self.layout_registry.register(
+                f"face_down_card_{i+1}",
+                pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
+                "face_down_card",
+                {"level": 3-i, "index": 0}
+            )
+
         # Layout for face-up cards
         def layout_face_up(level: int, count: int, y_rect: Any) -> dict:
             total_occupied_width = count * scaled_card_width + (count - 1) * MARGIN_SMALL * 2
@@ -636,71 +667,54 @@ class GameView:
                 )
                 for i in range(count)
             }
-        face_up_level_1 = layout_face_up(1, 5, face_up_rect.children["level_1"])
-        for i in range(5):
-            x, y, w, h = face_up_level_1[f"{i+1}"]
-            card_sprite = self.assets.get_card_sprite(level=1, index=i+1) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[1][i+1]
-            scaled_card, (x, y) = self._scale_image_to_fit(
-                card_sprite,
-                pygame.Rect(x, y, scaled_card_width, h),
-                margin=0,
-            )
-            self.screen.blit(scaled_card, (x, y))
-            
-            # Register pyramid card for click detection
-            card = desk.pyramid.slots[1][i] if i < len(desk.pyramid.slots[1]) else None
-            if card:
-                layout_registry.register(
-                    f"pyramid_card_1_{i+1}",
-                    (x, y, scaled_card_width, h),
-                    "pyramid_card",
-                    {"level": 1, "index": i+1, "card": card}
+        
+        def draw_face_up_card(card_amt: int, face_up_level_rects: List[pygame.Rect], level: int):
+            for i in range(card_amt):
+                card = desk.pyramid.slots[level][i] if i < len(desk.pyramid.slots[level]) else None
+                if card is None:
+                    continue
+                
+                # TODO: this looks messy, need to clean, why i+1?
+                x, y, w, h = face_up_level_rects[f"{i+1}"]
+                card_id = card.id[-2:]
+                card_sprite = self.assets.get_card_sprite(level=level, index=int(card_id))
+                scaled_card, (x, y) = self._scale_image_to_fit(
+                    card_sprite,
+                    pygame.Rect(x, y, scaled_card_width, h),
+                    margin=0,
                 )
-        face_up_level_2 = layout_face_up(2, 4, face_up_rect.children["level_2"])
-        for i in range(4):
-            x, y, w, h = face_up_level_2[f"{i+1}"]
-            card_sprite = self.assets.get_card_sprite(level=2, index=i+1) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[2][i+1]
-            scaled_card, (x, y) = self._scale_image_to_fit(
-                card_sprite,
-                pygame.Rect(x, y, scaled_card_width, h),
-                margin=0,
-            )
-            self.screen.blit(scaled_card, (x, y))
-            
-            # Register pyramid card for click detection
-            card = desk.pyramid.slots[2][i] if i < len(desk.pyramid.slots[2]) else None
-            if card:
-                layout_registry.register(
-                    f"pyramid_card_2_{i+1}",
-                    (x, y, scaled_card_width, h),
-                    "pyramid_card",
-                    {"level": 2, "index": i+1, "card": card}
-                )
-        face_up_level_3 = layout_face_up(3, 3, face_up_rect.children["level_3"])
-        for i in range(3):
-            x, y, w, h = face_up_level_3[f"{i+1}"]
-            card_sprite = self.assets.get_card_sprite(level=3, index=i+1) if hasattr(self.assets, 'get_card_sprite') else self.assets.card_sprites[3][i+1]
-            scaled_card, (x, y) = self._scale_image_to_fit(
-                card_sprite,
-                pygame.Rect(x, y, scaled_card_width, h),
-                margin=0,
-            )
-            self.screen.blit(scaled_card, (x, y))
-            
-            # Register pyramid card for click detection
-            card = desk.pyramid.slots[3][i] if i < len(desk.pyramid.slots[3]) else None
-            if card:
-                layout_registry.register(
-                    f"pyramid_card_3_{i+1}",
-                    (x, y, scaled_card_width, h),
-                    "pyramid_card",
-                    {"level": 3, "index": i+1, "card": card}
+                self.screen.blit(scaled_card, (x, y))
+                card = desk.pyramid.slots[level][i] if i < len(desk.pyramid.slots[level]) else None
+                self.layout_registry.register(
+                    f"pyramid_card_{level}_{i}",
+                    pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
+                    card,
+                    {"level": level, "index": i}
                 )
 
-    def _draw_boarder(self, rect: Union[Tuple[int, int, int, int], pygame.Rect], highlight: Tuple[int, int, int] = BLACK) -> None:
+        face_up_level_1 = layout_face_up(1, 5, face_up_rect.children["level_1"])
+        draw_face_up_card(5, face_up_level_1, 1)
+        face_up_level_2 = layout_face_up(2, 4, face_up_rect.children["level_2"])
+        draw_face_up_card(4, face_up_level_2, 2)
+        face_up_level_3 = layout_face_up(3, 3, face_up_rect.children["level_3"])
+        draw_face_up_card(3, face_up_level_3, 3)
+
+
+    def _draw_boarder(self, rect: Any, highlight: Any = BLACK) -> None:
         """
         Draw a border around the given rectangle.
         Accepts either a tuple or pygame.Rect.
         """
         rect = to_rect(rect)
         pygame.draw.rect(self.screen, highlight, rect, BORDER_WIDTH)
+
+    
+    def _highlight_rect(self, rect: Any, alpha: int = 50) -> None:
+        """
+        Draw a semi-transparent yellow highlight over the given rectangle.
+        """
+        rect = to_rect(rect)
+        self._draw_boarder(rect, highlight=(255, 255, 0))
+        highlight_surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        highlight_surface.fill((255, 255, 0, alpha))
+        self.screen.blit(highlight_surface, (rect.x, rect.y))

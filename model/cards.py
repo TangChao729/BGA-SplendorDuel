@@ -55,7 +55,7 @@ class Card(Piece):
             bonus=int(data.get("bonus", 0)),
             ability=data.get("ability"),
             crowns=int(data.get("crowns", 0)),
-            cost={t: int(v) for t, v in data.get("cost", {}).items()},
+            cost={Token(color): int(v) for color, v in data.get("cost", {}).items()},
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -70,7 +70,7 @@ class Card(Piece):
             "bonus": self.bonus,
             "ability": self.ability,
             "crowns": self.crowns,
-            "cost": dict(self.cost),
+            "cost": {token.color: count for token, count in self.cost.items()},
         }
 
     def __repr__(self) -> str:
@@ -202,6 +202,7 @@ class Pyramid(Piece):
     def __init__(self, decks: Dict[int, Deck]):
         super().__init__("pyramid")
         self.decks = decks
+        # TODO: add face-down cards
         self.slots: Dict[int, List[Optional[Card]]] = {}
         for level, deck in decks.items():
             count = self.SLOT_COUNTS.get(level, 3)

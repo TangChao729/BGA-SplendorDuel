@@ -48,7 +48,7 @@ class Bag(Piece):
         - counts(): current counts of tokens.
     """
 
-    def __init__(self, initial_counts: Dict[Token, int]):
+    def __init__(self, initial_counts: Dict[Token, int] = {}):
         """
         Args:
             initial_counts: map from token color to starting count.
@@ -159,25 +159,24 @@ class Board(Piece):
         elif len(tokens) < 0:
             raise ValueError("Cannot fill grid with negative number of tokens")
         else:
-            for (r, c), token in zip(self._spiral_coords, tokens):
-                self.grid[r][c] = token
+            for r, c in self._spiral_coords:
+                if self.grid[r][c] is None and len(tokens) > 0:
+                    self.grid[r][c] = tokens.pop(0)
 
-    def privileges_draws(self) -> List[Dict[str, List[Tuple[int, int]]]]:
+    def privileges_draws(self) -> Dict[Token, List[Tuple[int, int]]]:
         """
-        Return a list of tokens that can be drawn using privileges.
+        Return a Dict of tokens that can be drawn using privileges.
         - Any token other than 'gold' can be drawn.
         """
-        tokens: List[Dict[str, List[Tuple[int, int]]]] = []
+        tokens: Dict[Token, List[Tuple[int, int]]] = {}
         for r in range(self.rows):
             for c in range(self.cols):
                 t = self.grid[r][c]
                 if t and t.color != "gold":
-                    dm: Dict[str, List[Tuple[int, int]]] = {t.color: [(r, c)]}
-                    if dm not in tokens:
-                        tokens.append(dm)
+                    tokens[t] = tokens.get(t, []) + [(r, c)]
         return tokens
 
-    def eligible_draws(self) -> List[Dict[str, List[Tuple[int, int]]]]:
+    def eligible_draws(self) -> List[Dict[Token, List[Tuple[int, int]]]]:
         """
         Compute all legal token combinations for a TAKE_TOKENS action:
         - Up to 3 adjacent gem or 'pearl' tokens (no 'gold'), in straight lines.
@@ -186,57 +185,62 @@ class Board(Piece):
         Returns:
             List of dicts mapping color -> list of (row,col) coords.
         """
-        combos: List[Dict[str, List[Tuple[int, int]]]] = []
+        combos: List[Dict[Token, List[Tuple[int, int]]]] = []
         # gem and pearl combos (color != gold)
         for r in range(self.rows):
             for c in range(self.cols):
-                start = self.grid[r][c]
+                start: Token | None = self.grid[r][c]
                 if start and start.color != "gold":
+
+                    # for each direction, right, down, down-right, down-left
                     for dr, dc in [(0,1),(1,0),(1,1),(1,-1)]:
                         path: List[Tuple[int,int]] = []
                         rr, cc = r, c
                         for _ in range(3):
+
+                            # check if in bounds
                             if 0 <= rr < self.rows and 0 <= cc < self.cols:
+                                
                                 t = self.grid[rr][cc]
+                                # if not gold, add to path
                                 if t and t.color != "gold":
                                     path.append((rr,cc))
-                                    for L in range(1, len(path)+1):
-                                        sub = path[:L]
-                                        dm: Dict[str,List[Tuple[int,int]]] = {}
-                                        for (rr2,cc2) in sub:
-                                            colr = self.grid[rr2][cc2].color
-                                            dm.setdefault(colr, []).append((rr2,cc2))
-                                        if dm not in combos:
-                                            combos.append(dm)
                                 else:
                                     break
                             rr += dr; cc += dc
-        # single gold
-        for r in range(self.rows):
-            for c in range(self.cols):
-                t = self.grid[r][c]
-                if t and t.color == "gold":
-                    dm = {"gold": [(r,c)]}
-                    if dm not in combos:
-                        combos.append(dm)
+                        
+                        # Add all sub-paths (lengths 1, 2, 3)
+                        for length in range(1, len(path) + 1):
+                            sub_path = path[:length]
+                            combo = {}
+                            for (rr,cc) in sub_path:
+                                t = self.grid[rr][cc]
+                                combo[t] = combo.get(t, []) + [(rr,cc)]
+                            if combo not in combos:
+                                combos.append(combo)
+        # # single gold
+        # for r in range(self.rows):
+        #     for c in range(self.cols):
+        #         t = self.grid[r][c]
+        #         if t and t.color == "gold":
+        #             dm = {t: [(r,c)]}
+        #             if dm not in combos:
+        #                 combos.append(dm)
 
-        self.eligible_draws_cache = combos
         return combos
 
-    def draw_tokens(self, combo: Dict[str, List[Tuple[int, int]]]) -> List[Token]:
+    def draw_tokens(self, combo: Dict[Token, List[Tuple[int, int]]]) -> List[Token]:
         """
         Execute a draw action if combo is eligible; remove tokens from grid and return them.
         Raises ValueError if combo not eligible.
         """
-        if not hasattr(self, 'eligible_draws_cache'):
-            self.eligible_draws()
-        if combo not in self.eligible_draws_cache:
+        if combo not in self.eligible_draws():
             raise ValueError("Invalid draw combination")
         drawn: List[Token] = []
-        for color, coords in combo.items():
+        for token, coords in combo.items():
             for (r, c) in coords:
                 t = self.grid[r][c]
-                if t and t.color == color:
+                if t and t.color == token.color:
                     drawn.append(t)
                     self.grid[r][c] = None
         return drawn
