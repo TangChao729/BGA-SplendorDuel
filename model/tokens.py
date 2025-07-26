@@ -77,6 +77,7 @@ class Bag(Piece):
         """
         Shuffle and return all tokens (of any color) from the bag, emptying it.
         """
+        random.seed(42)
         if shuffle:
             random.shuffle(self._tokens)
         drawn = self._tokens.copy()

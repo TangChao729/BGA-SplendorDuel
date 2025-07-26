@@ -122,3 +122,22 @@ def test_board_invalid_draw_raises():
     # attempt to draw wrong location
     with pytest.raises(ValueError):
         board.draw_tokens({"green": [(0,1)]})
+
+def test_board_fill_and_eligible_draws_3():
+    initial_counts = {
+        Token("black"): 4,
+        Token("red"): 4,
+        Token("blue"): 4,
+        Token("green"): 4,
+        Token("white"): 4,
+        Token("pearl"): 2,
+        Token("gold"): 3,  # Wildcard tokens
+    }
+    bag = Bag(initial_counts)
+    board = Board()
+    tokens = bag.draw(shuffle=False)  # Ensure predictable order
+    board.fill_grid(tokens)
+    
+    eligible = board.eligible_draws()
+    assert len(eligible) == 19  # Each color has one token
+    assert board.grid[2][2].color == "black" # seed 42

@@ -77,17 +77,17 @@ class GameController:
         Map a screen click (x,y) to a game Action, or None if click is irrelevant.
         Uses the layout registry to detect clicks on game elements.
         """
-        element = self.view.layout_registry.find_element_at(pos)
-        if not element:
+        layout_element = self.view.layout_registry.find_element_at(pos)
+        if not layout_element:
             self.dialogue = f"Click at {pos} - no element found"
             return None
         
-        self.dialogue = f"Clicked {element.element_type.__name__}: {element.name}"
+        self.dialogue = f"Clicked {layout_element.element_type.__name__}: {layout_element.name}"
 
-        if element.element_type != ActionButton:
-            self._handle_element_selection(element)
+        if layout_element.element_type != ActionButton:
+            self._handle_element_selection(layout_element)
         else:
-            button: ActionButton = element.element
+            button: ActionButton = layout_element.element
             return self._handle_action_button_click(button)
         
         return None
@@ -98,9 +98,6 @@ class GameController:
         
         success, message = self.GSM.select_element(layout_element, element_type_name)
         self.dialogue = message
-        
-        # No need to manage controller's selection - GSM handles it all
-        # The UI will get the selection state from GSM when rendering
 
     def _handle_action_button_click(self, button: ActionButton) -> Optional[Action]:
         """Handle clicks on action panel buttons using GameStateMachine."""
@@ -115,6 +112,7 @@ class GameController:
         # Handle special cases that require controller-level operations
         if button.action == "rollback_to_start" and hasattr(self, 'desk_snapshot'):
             self.desk = copy.deepcopy(self.desk_snapshot)
+            self.GSM.desk = self.desk
             # Clear GSM's selection instead of controller's
             self.GSM.current_selection.clear()
             message = "Rolled back to start of round"

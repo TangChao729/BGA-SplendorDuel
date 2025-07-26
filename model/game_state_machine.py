@@ -2,10 +2,10 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 
-# # Use TYPE_CHECKING to avoid circular imports
-# if TYPE_CHECKING:
-#     from model.tokens import Token
-#     from model.cards import Card
+# Use TYPE_CHECKING to avoid circular imports
+if TYPE_CHECKING:
+    from model.tokens import Token
+    from model.cards import Card
 
 from model.actions import ActionType, Action, ActionButton
 
