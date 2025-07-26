@@ -10,7 +10,7 @@ from model.player import PlayerState
 from model.tokens import Token
 from model.cards import Card
 from model.actions import ActionType, Action, ActionButton  # Basic action classes
-from model.game_state_machine import GameState, GameStateMachine, CurrentAction  # State machine classes
+from model.game_state_machine import GameState, CurrentAction, GameSessionState, GameStateManager  # State machine classes
 from view.assets import AssetManager  # assets.py is in view/ directory
 from view.game_view import GameView   # game_view.py is in view/ directory
 from view.layout import LayoutElement
@@ -41,9 +41,11 @@ class GameController:
         self.current_state: GameState = GameState.START_OF_ROUND
         self.current_player_index: int = 0
         
-        self.GSM = GameStateMachine(self.desk)
-        # Ensure GSM and controller states are synchronized
-        self.GSM.current_state = self.current_state
+        # Initialize session state for stateless GSM
+        self.session_state = GameSessionState(
+            current_state=GameState.START_OF_ROUND,
+            current_selection=[]
+        )
         
 
     def run(self):
@@ -54,7 +56,8 @@ class GameController:
             if self.desk.current_player_index != self.current_player_index:
                 self.desk_snapshot = copy.deepcopy(self.desk)
                 self.current_player_index = self.desk.current_player_index
-            self.current_action: CurrentAction = self.GSM.get_current_action(state=self.current_state)
+            # Use stateless function to get current action
+            self.current_action: CurrentAction = GameStateManager.get_current_action(self.session_state, self.desk)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
@@ -67,8 +70,8 @@ class GameController:
                         self.desk.apply_action(action)
                         self.dialogue = f"Action executed: {action.type.name}"
             
-            # Use GSM's current_selection directly for rendering
-            self.view.render(self.desk, self.dialogue, self.current_action, self.GSM.current_selection)
+            # Use session state for rendering
+            self.view.render(self.desk, self.dialogue, self.current_action, self.session_state.current_selection)
             self.clock.tick(30)
         pygame.quit()
 
@@ -93,28 +96,35 @@ class GameController:
         return None
     
     def _handle_element_selection(self, layout_element: LayoutElement) -> None:
-        """Handle element selection using GameStateMachine."""
+        """Handle element selection using stateless GameStateManager."""
         element_type_name = type(layout_element.element).__name__
         
-        success, message = self.GSM.select_element(layout_element, element_type_name)
+        # Use stateless function
+        new_session, success, message = GameStateManager.select_element(
+            self.session_state, layout_element, self.desk, element_type_name
+        )
+        
+        # Update session state
+        self.session_state = new_session
         self.dialogue = message
 
     def _handle_action_button_click(self, button: ActionButton) -> Optional[Action]:
-        """Handle clicks on action panel buttons using GameStateMachine."""
+        """Handle clicks on action panel buttons using stateless GameStateManager."""
         
-        # Let the state machine handle the button click - no controller context needed
-        action, message = self.GSM.handle_button_click(button)
+        # Use stateless function
+        new_session, action, message = GameStateManager.handle_button_click(
+            self.session_state, button, self.desk
+        )
         
-        # Update the controller state to match the state machine
-        self.current_state = self.GSM.current_state
-        self.current_action = self.GSM.get_current_action(state=self.current_state)
+        # Update session state and controller state
+        self.session_state = new_session
+        self.current_state = new_session.current_state
         
         # Handle special cases that require controller-level operations
         if button.action == "rollback_to_start" and hasattr(self, 'desk_snapshot'):
             self.desk = copy.deepcopy(self.desk_snapshot)
-            self.GSM.desk = self.desk
-            # Clear GSM's selection instead of controller's
-            self.GSM.current_selection.clear()
+            # Reset session state to clear selections
+            self.session_state = self.session_state.with_selection([])
             message = "Rolled back to start of round"
         
         # Update dialogue with the message from state machine
