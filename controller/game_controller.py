@@ -35,11 +35,10 @@ class GameController:
         
         # Initialize game model
         self.desk = Desk(card_json, token_json, royal_json, initial_privileges)
+        self.desk_snapshot = copy.deepcopy(self.desk)
         self.dialogue = "Welcome to Splendor Duel!"
         self.clock = pygame.time.Clock()
         self.running = True
-        self.current_state: GameState = GameState.START_OF_ROUND
-        self.current_player_index: int = 0
         
         # Initialize session state for stateless GSM
         self.session_state = GameSessionState(
@@ -52,11 +51,6 @@ class GameController:
         """Main Pygame loop: handle events, update model, render view."""
         self.desk_snapshot: Desk = copy.deepcopy(self.desk)
         while self.running:
-            # record the start state when change player
-            if self.desk.current_player_index != self.current_player_index:
-                self.desk_snapshot = copy.deepcopy(self.desk)
-                self.current_player_index = self.desk.current_player_index
-            # Use stateless function to get current action
             self.current_action: CurrentAction = GameStateManager.get_current_action(self.session_state, self.desk)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -118,14 +112,15 @@ class GameController:
         
         # Update session state and controller state
         self.session_state = new_session
-        self.current_state = new_session.current_state
         
         # Handle special cases that require controller-level operations
         if button.action == "rollback_to_start" and hasattr(self, 'desk_snapshot'):
             self.desk = copy.deepcopy(self.desk_snapshot)
-            # Reset session state to clear selections
-            self.session_state = self.session_state.with_selection([])
             message = "Rolled back to start of round"
+
+        elif button.action == "finish_round":
+            self.desk_snapshot = copy.deepcopy(self.desk)
+            message = "Round finished - next player's turn"
         
         # Update dialogue with the message from state machine
         self.dialogue = message
