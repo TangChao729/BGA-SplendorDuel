@@ -12,15 +12,33 @@ from model.actions import ActionType, Action, ActionButton
 
 class GameState(Enum):
     """Enumeration of all possible game states."""
-    START_OF_ROUND = "start_of_round"
-    USE_PRIVILEGE = "use_privilege"
-    REPLENISH_BOARD = "replenish_board"
-    CHOOSE_MANDATORY_ACTION = "choose_mandatory_action"
-    PURCHASE_CARD = "purchase_card"
-    TAKE_TOKENS = "take_tokens"
-    TAKE_GOLD_AND_RESERVE = "take_gold_and_reserve"
-    POST_ACTION_CHECKS = "post_action_checks"
-    CONFIRM_ROUND = "confirm_round"
+    # Main entry points
+    START_OF_ROUND              = "start_of_round"          # DONE
+
+    # Optional actions
+    USE_PRIVILEGE               = "use_privilege"           # DONE
+    REPLENISH_BOARD             = "replenish_board"         # DONE
+
+    # Post optional actions 
+    CHOOSE_MANDATORY_ACTION     = "choose_mandatory_action" # DONE
+
+    # Mandatory actions
+    PURCHASE_CARD               = "purchase_card"           # DONE
+    TAKE_TOKENS                 = "take_tokens"             # DONE
+    TAKE_GOLD_AND_RESERVE       = "take_gold_and_reserve"   # DONE
+
+    # Post-action checks
+    POST_ACTION_CHECKS          = "post_action_checks"      # DONE
+    DISCARD_TOKENS              = "discard_tokens"          # TODO
+    ROYAL_SELECTION             = "royal_selection"         # TODO
+    CARD_ABILITY_TURN           = "card_ability_turn"       # TODO
+    CARD_ABILITY_JOKER          = "card_ability_joker"      # TODO
+    CARD_ABILITY_2ND_SAME_COLOR = "card_ability_take_2nd_same" # TODO
+    CARD_ABILITY_PRIVILEGE      = "card_ability_privilege"  # TODO
+    CARD_ABILITY_STEAL          = "card_ability_steal"      # TODO
+
+    # End of round
+    CONFIRM_ROUND               = "confirm_round"           # DONE
 
 
 @dataclass
