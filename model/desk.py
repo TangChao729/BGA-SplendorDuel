@@ -165,16 +165,20 @@ class Desk:
                 player.add_tokens(self.board.draw_tokens(action.payload["combo"]))
 
             case ActionType.TAKE_GOLD_AND_RESERVE:
-                gold_token_positions, level, idx = (
+                gold_token, gold_token_positions, card, level, idx = (
+                    action.payload["gold_token"],
                     action.payload["gold_token_positions"],
-                    action.payload["level"],
-                    action.payload["index"],
+                    action.payload["card"],
+                    action.payload["card_level"],
+                    action.payload["card_index"],
                 )
 
-                self.board.draw_tokens("gold", [gold_token_positions])
-                player.add_tokens(["gold"])
-
-                self.player.reserve_card(self.pyramid.get_card(level, idx))
+                player.add_tokens(self.board.draw_gold({Token("gold"): [gold_token_positions]}))
+                if action.payload["card_index"] == 0:
+                    player.reserve_card(card)
+                else:
+                    player.reserve_card(self.pyramid.get_card(level, idx))
+                    self.pyramid.fill_card(level, idx)
 
             case ActionType.PURCHASE_CARD:
                 if "reserved_index" in action.payload:

@@ -229,6 +229,16 @@ class Board(Piece):
         #                 combos.append(dm)
 
         return combos
+    
+    def draw_gold(self, combo: Dict[Token, List[Tuple[int, int]]]) -> List[Token]:
+        """
+        Draw a gold token from the board.
+        """
+        for token, coords in combo.items():
+            for (r, c) in coords:
+                t = self.grid[r][c]
+                self.grid[r][c] = None
+                return [token]
 
     def draw_tokens(self, combo: Dict[Token, List[Tuple[int, int]]]) -> List[Token]:
         """

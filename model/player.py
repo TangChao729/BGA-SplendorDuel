@@ -107,6 +107,12 @@ class PlayerState:
         self.points += card.points
         self.crowns += card.crowns
 
+    def can_reserve(self) -> bool:
+        """
+        Check if the player can reserve a card.
+        """
+        return len(self.reserved) < 3
+
     def reserve_card(self, card: Card) -> bool:
         """
         Reserve a card into player's hand (up to 3). Returns True if successful.

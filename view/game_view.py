@@ -5,7 +5,7 @@ import os
 from model.desk import Desk
 from model.actions import ActionButton
 from model.game_state_machine import CurrentAction
-from model.cards import Card
+from model.cards import Card, Deck
 from model.tokens import Token
 from view.assets import AssetManager
 from view.layout import LayoutRegistry, LayoutElement, HSplit, VSplit, Margin
@@ -398,34 +398,31 @@ class GameView:
         Draw the player's reserved cards in a row.
         """
         rect = to_rect(rect)
-        if not reserved:
-            # Draw empty slots
-            for i in range(3):
-                x = rect.x + i * (rect.width // 3)
-                card_rect = pygame.Rect(x, rect.y, rect.width // 3 - MARGIN_SMALL, rect.height)
-                self._draw_card_shape(card_rect, alpha=ALPHA_VERY_LOW)
-        else:
-            for i, card in enumerate(reserved):
-                if i >= 3:  # Limit to 3 reserved cards
-                    break
-                x = rect.x + i * (rect.width // 3)
-                card_rect = pygame.Rect(x, rect.y, rect.width // 3 - MARGIN_SMALL, rect.height)
-                
-                scaled_image, position = self._scale_image_to_fit(
-                    self.assets.card_backgrounds[card.color], card_rect, MARGIN_SMALL
-                )
-                self.screen.blit(scaled_image, position)
-                
-                # Register the card for click detection
-                self.layout_registry.register(
-                    LayoutElement(
-                        name=f"reserved_card_{i}",
-                        rect=card_rect,
-                        element=card,
-                        element_type=type(card),
-                        metadata={"index": i, "card": card}
-                    )
-                )
+        # Draw empty slots
+        for i in range(3):
+            x = rect.x + i * (rect.width // 3)
+            card_rect = pygame.Rect(x, rect.y, rect.width // 3 - MARGIN_SMALL, rect.height)
+            self._draw_card_shape(card_rect, alpha=ALPHA_VERY_LOW)
+            
+        for i, card in enumerate(reserved):
+            if i >= 3:  # Limit to 3 reserved cards
+                break
+            x = rect.x + i * (rect.width // 3)
+            card_rect = pygame.Rect(x, rect.y, rect.width // 3 - MARGIN_SMALL, rect.height)
+            level, index = card.id.split("-")
+            card_sprite = self.assets.get_card_sprite(level=int(level), index=int(index))
+            scaled_image, position = self._scale_image_to_fit(
+                card_sprite, card_rect, MARGIN_SMALL
+            )
+            self.screen.blit(scaled_image, position)
+            
+            # Register the card for click detection
+            self.layout_registry.register(
+                f"reserved_card_{i}",
+                card_rect,
+                card,
+                {"index": i, "card": card}
+            )
 
     def draw_main_panel(self, desk: Desk, dialogue: str, rect: Any) -> None:
         """
@@ -636,6 +633,7 @@ class GameView:
         )
         # Draw face-down cards
         for i in range(3):
+            deck: Deck = desk.pyramid.decks[i+1]
             x, y, w, h = face_down_rect.children[f"level_{i+1}"]
             card_sprite = self.assets.get_card_sprite(level=3-i, index=0)
             scaled_card, (x, y) = self._scale_image_to_fit(
@@ -650,7 +648,7 @@ class GameView:
             self.layout_registry.register(
                 f"face_down_card_{i+1}",
                 pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
-                "face_down_card",
+                deck,
                 {"level": 3-i, "index": 0}
             )
 

@@ -3,10 +3,10 @@ from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 
 # Use TYPE_CHECKING to avoid circular imports
-if TYPE_CHECKING:
-    from model.tokens import Token
-    from model.cards import Card
-
+# if TYPE_CHECKING:
+from model.tokens import Token
+from model.cards import Card, Deck
+from view.layout import LayoutElement
 from model.actions import ActionType, Action, ActionButton
 
 
@@ -51,7 +51,7 @@ class GameStateConfig:
         GameState.CHOOSE_MANDATORY_ACTION: SelectionRules([], 0),
         GameState.PURCHASE_CARD: SelectionRules(["Card"], 1, 1),
         GameState.TAKE_TOKENS: SelectionRules(["Token"], 3, 1, {"no_gold": True}),
-        GameState.TAKE_GOLD_AND_RESERVE: SelectionRules(["Token", "Card"], 2, 2, {"require_gold": True}),
+        GameState.TAKE_GOLD_AND_RESERVE: SelectionRules(["Token", "Card", "Deck"], 2, 2, {"require_gold": True, "require_card": True}),
         GameState.POST_ACTION_CHECKS: SelectionRules([], 0),
         GameState.CONFIRM_ROUND: SelectionRules([], 0),
     }
@@ -82,7 +82,7 @@ class CurrentAction:
 class GameSessionState:
     """Immutable state object representing the current game session UI state."""
     current_state: GameState
-    current_selection: List[Any]  # LayoutElement objects
+    current_selection: List[LayoutElement]  # LayoutElement objects
     
     def with_state(self, new_state: GameState) -> 'GameSessionState':
         """Return a new session state with updated game state."""
@@ -131,13 +131,42 @@ class GameStateManager:
         
         # Check special rules
         if rules.special_rules:
-            if element_type_name == "Token":
-                if rules.special_rules.get("no_gold") and hasattr(layout_element.element, 'color') and layout_element.element.color == "gold":
-                    return False, "Cannot select gold tokens in this state"
-                if rules.special_rules.get("require_gold") and len(session.current_selection) == 0:
+            if session.current_state == GameState.TAKE_GOLD_AND_RESERVE:
+                # Special handling for TAKE_GOLD_AND_RESERVE - allow flexible ordering
+                # Count what's already selected
+                player = desk.current_player
+                if not player.can_reserve():
+                    return False, "Cannot reserve more than 3 cards"
+
+                gold_tokens_selected = 0
+                cards_selected = 0
+                decks_selected = 0
+                
+                for selected_element in session.current_selection:
+                    selected_type = type(selected_element.element).__name__
+                    if selected_type == "Token" and hasattr(selected_element.element, 'color') and selected_element.element.color == "gold":
+                        gold_tokens_selected += 1
+                    elif selected_type == "Card" or selected_type == "Deck":
+                        cards_selected += 1
+                
+                # Check what we're trying to select now
+                if element_type_name == "Token":
+                    # Only allow gold tokens
                     if not (hasattr(layout_element.element, 'color') and layout_element.element.color == "gold"):
-                        return False, "Must select gold token first"
-        
+                        return False, "Can only select gold tokens in this action"
+                    # Only allow one gold token total
+                    if gold_tokens_selected >= 1:
+                        return False, "Can only select one gold token"
+                elif element_type_name == "Card" or element_type_name == "Deck":
+                    # Only allow one card total
+                    if cards_selected >= 1:
+                        return False, "Can only select one card or deck"
+            else:
+                # Original special rules for other states
+                if element_type_name == "Token":
+                    if rules.special_rules.get("no_gold") and hasattr(layout_element.element, 'color') and layout_element.element.color == "gold":
+                        return False, "Cannot select gold tokens in this state"
+                    
         return True, ""
     
     @staticmethod
@@ -376,8 +405,6 @@ class GameStateManager:
                 if combo is None:
                     return session, None, error
                 
-                # The validation is already done in can_confirm_selection via _validate_token_line
-                # So we can directly create the action
                 action = Action(ActionType.TAKE_TOKENS, {"combo": combo})
                 new_session = session.with_state_and_selection(GameState.POST_ACTION_CHECKS, [])
                 return new_session, action, "Tokens taken successfully"
@@ -391,9 +418,43 @@ class GameStateManager:
                 new_session = session.with_state_and_selection(GameState.START_OF_ROUND, [])
                 return new_session, None, "Cancelled gold and reserve action"
             case "confirm":
-                # TODO: Implement gold and reserve logic
-                # You'll need to validate that one gold token and one card are selected
-                return session, None, "Gold and reserve action not yet implemented"
+                can_confirm, reason = GameStateManager.can_confirm_selection(session, desk)
+                if not can_confirm:
+                    return session, None, reason
+                
+                # Validate that we have exactly one gold token and one card
+                gold_token_layout_element = None
+                card_layout_element = None
+                
+                for selected_element in session.current_selection:
+                    element_type = type(selected_element.element).__name__
+                    if element_type == "Token" and hasattr(selected_element.element, 'color') and selected_element.element.color == "gold":
+                        gold_token_layout_element = selected_element
+                    elif element_type == "Card" or element_type == "Deck":
+                        card_layout_element = selected_element
+                
+                if gold_token_layout_element is None:
+                    return session, None, "Must select exactly one gold token"
+                if card_layout_element is None:
+                    return session, None, "Must select exactly one card"
+                
+                if isinstance(card_layout_element.element, Deck):
+                    card = card_layout_element.element.draw(1)[0]
+                elif isinstance(card_layout_element.element, Card):
+                    card = card_layout_element.element
+                
+                action = Action(ActionType.TAKE_GOLD_AND_RESERVE, {
+                    "gold_token": gold_token_layout_element.element,
+                    "gold_token_positions": gold_token_layout_element.metadata.get("position"),
+                    "card": card,
+                    "card_level": card_layout_element.metadata.get("level"),
+                    "card_index": card_layout_element.metadata.get("index")
+                })
+
+
+                
+                new_session = session.with_state_and_selection(GameState.POST_ACTION_CHECKS, [])
+                return new_session, action, "Gold taken and card reserved successfully"
         return session, None, f"Unknown action: {button.action}"
     
     @staticmethod
