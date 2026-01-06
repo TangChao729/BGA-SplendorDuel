@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from model.tokens import Token
 from model.piece import Piece
 
-random.seed(42)  # For reproducibility in tests
+random.seed(44)  # For reproducibility in tests
 
 
 class Card(Piece):

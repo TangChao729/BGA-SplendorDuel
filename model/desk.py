@@ -84,6 +84,24 @@ class Desk:
         Clear the extra turn flag.
         """
         self.extra_turn = False
+    
+    def grant_privilege_to_player(self, player: PlayerState) -> None:
+        """
+        Grant a privilege to a player.
+        If board has privileges, take from board.
+        Otherwise, take from opponent.
+        """
+        if self.privileges > 0:
+            # Take from board
+            self.privileges -= 1
+            player.add_privilege(1)
+        else:
+            # Take from opponent
+            opponent = self.players[1 - self.current_player_index]
+            if opponent.privileges > 0:
+                opponent.privileges -= 1
+                player.add_privilege(1)
+            # If opponent has no privileges, nothing happens
 
     def legal_take_tokens(self) -> List[Action]:
         actions: List[Action] = []
@@ -172,15 +190,17 @@ class Desk:
 
             case ActionType.REPLENISH_BOARD:
                 self.board.fill_grid(self.bag.draw())
-                # Give the other player a privilege
+                # Give the other player a privilege (uses special logic for replenish)
                 other_player = self.players[1 - self.current_player_index]
                 if self.privileges > 0:
-                    other_player.add_privilege()
                     self.privileges -= 1
-                else:
-                    # If no privileges left, take one from current player
                     other_player.add_privilege()
-                    player.privileges -= 1
+                else:
+                    # If no privileges left on board, take one from current player
+                    if player.privileges > 0:
+                        player.privileges -= 1
+                        other_player.add_privilege()
+                    # If current player has none, nothing happens
 
             case ActionType.TAKE_TOKENS:
                 player.add_tokens(self.board.draw_tokens(action.payload["combo"]))
@@ -215,11 +235,13 @@ class Desk:
                 # Handle card abilities
                 if card.ability == "TURN":
                     self.grant_extra_turn()
-                else:
-                    pass
-                # Combo ability - both joker and extra turn
+                elif card.ability == "PRIVILEGE":
+                    self.grant_privilege_to_player(player)
+                elif card.ability == "1 COLOR/TURN":
+                    # Combo ability - both joker and extra turn
                     self.grant_extra_turn()
                     # TODO: Handle 1 COLOR part when implementing joker ability
+                    pass
 
             case ActionType.DISCARD_TOKENS:
                 tokens_to_discard = action.payload["tokens"]
@@ -245,8 +267,8 @@ class Desk:
                     if claimed_royal.ability == "TURN":
                         self.grant_extra_turn()
                     if claimed_royal.ability == "PRIVILEGE":
-                        player.add_privilege(1)
-                    # Other abilities (STEAL, TURN) will be handled in future implementations
+                        self.grant_privilege_to_player(player)
+                    # Other abilities (STEAL) will be handled in future implementations
 
         # TODO: handle victory and turn advance in the controller
         # # After any action, check victory
