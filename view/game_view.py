@@ -88,7 +88,7 @@ class GameView:
             [("player1", 1), ("player2", 1)],
         )
 
-    def render(self, desk: Desk, dialogue: str, current_action: CurrentAction, current_selection: List[LayoutElement]) -> None:
+    def render(self, desk: Desk, message_history: List[str], current_action: CurrentAction, current_selection: List[LayoutElement]) -> None:
         """
         Render the entire game view, including background, main panel, and player panels.
         """
@@ -96,7 +96,7 @@ class GameView:
         self.layout_registry.clear()
         
         self.draw_background()
-        self.draw_main_panel(desk, dialogue, self.view_split.children["main"])
+        self.draw_main_panel(desk, message_history, self.view_split.children["main"])
         self.draw_player_panel(desk.players[0], self.right_split.children["player1"], is_current_player=(desk.current_player_index == 0))
         self.draw_player_panel(desk.players[1], self.right_split.children["player2"], is_current_player=(desk.current_player_index == 1))
         self.draw_action_panel(desk, self.action_panel_rect, current_action)
@@ -436,23 +436,23 @@ class GameView:
                 {"index": i, "card": card}
             )
 
-    def draw_main_panel(self, desk: Desk, dialogue: str, rect: Any) -> None:
+    def draw_main_panel(self, desk: Desk, message_history: List[str], rect: Any) -> None:
         """
-        Draw the main game panel, including bag, privileges, royals, dialogue, board, and pyramid.
+        Draw the main game panel, including bag, privileges, royals, message history, board, and pyramid.
         """
         x0, y0, w, h = rect
         self._draw_boarder(rect)
         main_split = VSplit((x0, y0, w, h), [("action", 2),("upper", 10), ("lower", 30)])
         upper_rect = main_split.children["upper"]
         lower_rect = main_split.children["lower"]
-        upper_split = HSplit(upper_rect, [("bag", 1), ("privilege", 1), ("royal", 2), ("dialogue", 2)])
+        upper_split = HSplit(upper_rect, [("bag", 1), ("privilege", 1), ("royal", 2), ("messages", 2)])
         lower_split = HSplit(lower_rect, [("board", 2), ("pyramid", 3)])
         # store action panel rect
         self.action_panel_rect = main_split.children["action"]
         self._draw_bag(desk, Margin(upper_split.children["bag"], (MARGIN_MEDIUM,)*4).rect)
         self._draw_privileges(desk, Margin(upper_split.children["privilege"], (MARGIN_MEDIUM,)*4).rect)
         self._draw_royal(desk, Margin(upper_split.children["royal"], (MARGIN_MEDIUM,)*4).rect)
-        self._draw_dialogue_panel(dialogue, Margin(upper_split.children["dialogue"], (MARGIN_MEDIUM,)*4).rect)
+        self._draw_message_history(message_history, Margin(upper_split.children["messages"], (MARGIN_MEDIUM,)*4).rect)
         self._draw_board(desk, Margin(lower_split.children["board"], (MARGIN_MEDIUM,)*4).rect)
         self._draw_pyramid(desk, Margin(lower_split.children["pyramid"], (MARGIN_MEDIUM,)*4).rect)
 
@@ -585,14 +585,33 @@ class GameView:
                     {"index": slot_index}
                 )
 
-    def _draw_dialogue_panel(self, text: str, rect: Any) -> None:
+    def _draw_message_history(self, messages: List[str], rect: Any) -> None:
         """
-        Draw the dialogue panel with the given text.
+        Draw the message history panel, showing recent messages chat-style.
+        Most recent message at the bottom.
         """
         rect = to_rect(rect)
         pygame.draw.rect(self.screen, BLACK, rect, BORDER_WIDTH)
-        txt = self.font.render(text, True, BLACK)
-        self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, rect.y + MARGIN_MEDIUM))
+        
+        # Create semi-transparent background
+        bg_surface = pygame.Surface((rect.width, rect.height))
+        bg_surface.set_alpha(180)
+        bg_surface.fill(WHITE)
+        self.screen.blit(bg_surface, (rect.x, rect.y))
+        
+        # Calculate how many messages can fit
+        line_height = self.font.get_height() + 4
+        max_lines = (rect.height - MARGIN_MEDIUM * 2) // line_height
+        
+        # Get the most recent messages that fit
+        visible_messages = messages[-max_lines:] if len(messages) > max_lines else messages
+        
+        # Draw messages from top to bottom (oldest visible at top, newest at bottom)
+        y_offset = rect.y + MARGIN_MEDIUM
+        for message in visible_messages:
+            txt = self.font.render(message, True, BLACK)
+            self.screen.blit(txt, (rect.x + MARGIN_MEDIUM, y_offset))
+            y_offset += line_height
 
     def _draw_board(self, desk: Desk, rect: Any) -> None:
         """

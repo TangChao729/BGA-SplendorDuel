@@ -36,7 +36,7 @@ class GameController:
         # Initialize game model
         self.desk = Desk(card_json, token_json, royal_json, initial_privileges)
         self.desk_snapshot = copy.deepcopy(self.desk)
-        self.dialogue = "Welcome to Splendor Duel!"
+        self.message_history: List[str] = ["Welcome to Splendor Duel!"]
         self.clock = pygame.time.Clock()
         self.running = True
         
@@ -47,6 +47,11 @@ class GameController:
         )
         
 
+    def add_message(self, message: str) -> None:
+        """Add a message to the history."""
+        if message:  # Only add non-empty messages
+            self.message_history.append(message)
+    
     def run(self):
         """Main Pygame loop: handle events, update model, render view."""
         self.desk_snapshot: Desk = copy.deepcopy(self.desk)
@@ -62,10 +67,10 @@ class GameController:
                     action = self._interpret_click(event.pos)
                     if action:
                         self.desk.apply_action(action)
-                        self.dialogue = f"Action executed: {action.type.name}"
+                        self.add_message(f"Action executed: {action.type.name}")
             
             # Use session state for rendering
-            self.view.render(self.desk, self.dialogue, self.current_action, self.session_state.current_selection)
+            self.view.render(self.desk, self.message_history, self.current_action, self.session_state.current_selection)
             self.clock.tick(30)
         pygame.quit()
 
@@ -76,10 +81,10 @@ class GameController:
         """
         layout_element = self.view.layout_registry.find_element_at(pos)
         if not layout_element:
-            self.dialogue = f"Click at {pos} - no element found"
+            self.add_message(f"Click at {pos} - no element found")
             return None
         
-        self.dialogue = f"Clicked {layout_element.element_type.__name__}: {layout_element.name}"
+        self.add_message(f"Clicked {layout_element.element_type.__name__}: {layout_element.name}")
 
         if layout_element.element_type != ActionButton:
             self._handle_element_selection(layout_element)
@@ -100,7 +105,7 @@ class GameController:
         
         # Update session state
         self.session_state = new_session
-        self.dialogue = message
+        self.add_message(message)
 
     def _handle_action_button_click(self, button: ActionButton) -> Optional[Action]:
         """Handle clicks on action panel buttons using stateless GameStateManager."""
@@ -122,8 +127,8 @@ class GameController:
             self.desk_snapshot = copy.deepcopy(self.desk)
             message = "Round finished - next player's turn"
         
-        # Update dialogue with the message from state machine
-        self.dialogue = message
+        # Update message history with the message from state machine
+        self.add_message(message)
         
         return action
 
