@@ -17,7 +17,7 @@ class GameState(Enum):
 
     # Optional actions
     USE_PRIVILEGE               = "use_privilege"           # DONE
-    REPLENISH_BOARD             = "replenish_board"         # DONE
+    REPLENISH_BOARD             = "replenish_board"         # TODO: After replenish or reserve face down cards, no going back to original state
 
     # Post optional actions 
     CHOOSE_MANDATORY_ACTION     = "choose_mandatory_action" # DONE
@@ -31,9 +31,9 @@ class GameState(Enum):
     POST_ACTION_CHECKS          = "post_action_checks"      # DONE
     DISCARD_TOKENS              = "discard_tokens"          # TODO
     ROYAL_SELECTION             = "royal_selection"         # TODO
-    CARD_ABILITY_TURN           = "card_ability_turn"       # TODO
+    CARD_ABILITY_2ND_TURN       = "card_ability_2nd_turn"   # TODO
     CARD_ABILITY_JOKER          = "card_ability_joker"      # TODO
-    CARD_ABILITY_2ND_SAME_COLOR = "card_ability_take_2nd_same" # TODO
+    CARD_ABILITY_2ND_COLOR      = "card_ability_2nd_color"  # TODO
     CARD_ABILITY_PRIVILEGE      = "card_ability_privilege"  # TODO
     CARD_ABILITY_STEAL          = "card_ability_steal"      # TODO
 
@@ -71,6 +71,7 @@ class GameStateConfig:
         GameState.TAKE_TOKENS: SelectionRules(["Token"], 3, 1, {"no_gold": True}),
         GameState.TAKE_GOLD_AND_RESERVE: SelectionRules(["Token", "Card", "Deck"], 2, 2, {"require_gold": True, "require_card": True}),
         GameState.POST_ACTION_CHECKS: SelectionRules([], 0),
+        GameState.DISCARD_TOKENS: SelectionRules(["Token"], 10, 1, {"discard_mode": True, "player_tokens_only": True}),
         GameState.CONFIRM_ROUND: SelectionRules([], 0),
     }
     
@@ -149,7 +150,16 @@ class GameStateManager:
         
         # Check special rules
         if rules.special_rules:
-            if session.current_state == GameState.TAKE_GOLD_AND_RESERVE:
+            # Handle DISCARD_TOKENS state - only allow player tokens
+            if session.current_state == GameState.DISCARD_TOKENS:
+                if rules.special_rules.get("player_tokens_only"):
+                    # Check if this is a player token (has "player" in metadata)
+                    if "player" not in layout_element.metadata:
+                        return False, "Can only select tokens from your hand"
+                    # Check if it belongs to current player
+                    if layout_element.metadata.get("player") != desk.current_player.name:
+                        return False, "Can only select your own tokens"
+            elif session.current_state == GameState.TAKE_GOLD_AND_RESERVE:
                 # Special handling for TAKE_GOLD_AND_RESERVE - allow flexible ordering
                 # Count what's already selected
                 player = desk.current_player
@@ -300,6 +310,9 @@ class GameStateManager:
                 
             case GameState.POST_ACTION_CHECKS:
                 return GameStateManager._handle_post_action_checks_buttons(session, button, desk)
+                
+            case GameState.DISCARD_TOKENS:
+                return GameStateManager._handle_discard_tokens_buttons(session, button, desk)
                 
             case GameState.CONFIRM_ROUND:
                 return GameStateManager._handle_confirm_round_buttons(session, button, desk)
@@ -480,8 +493,39 @@ class GameStateManager:
         """Handle buttons in POST_ACTION_CHECKS state."""
         match button.action:
             case "continue_to_confirm_round":
-                new_session = session.with_state(GameState.CONFIRM_ROUND)
-                return new_session, None, "Ready to confirm round"
+                # Check if player needs to discard tokens
+                player = desk.current_player
+                if player.get_token_count() > 10:
+                    new_session = session.with_state(GameState.DISCARD_TOKENS)
+                    return new_session, None, f"You have {player.get_token_count()} tokens. Discard down to 10."
+                else:
+                    new_session = session.with_state(GameState.CONFIRM_ROUND)
+                    return new_session, None, "Ready to confirm round"
+        return session, None, f"Unknown action: {button.action}"
+    
+    @staticmethod
+    def _handle_discard_tokens_buttons(session: GameSessionState, button: ActionButton, desk: Any) -> Tuple[GameSessionState, Optional[Action], str]:
+        """Handle buttons in DISCARD_TOKENS state."""
+        match button.action:
+            case "confirm_discard":
+                player = desk.current_player
+                tokens_to_discard = session.current_selection
+                
+                # Validate that we'll have exactly 10 tokens after discard
+                current_count = player.get_token_count()
+                discard_count = len(tokens_to_discard)
+                remaining = current_count - discard_count
+                
+                if remaining != 10:
+                    return session, None, f"Must discard {current_count - 10} tokens (currently selected: {discard_count})"
+                
+                # Create action to discard tokens
+                action = Action(ActionType.DISCARD_TOKENS, {
+                    "tokens": [elem.element for elem in tokens_to_discard]
+                })
+                
+                new_session = session.with_state_and_selection(GameState.CONFIRM_ROUND, [])
+                return new_session, action, "Tokens discarded successfully"
         return session, None, f"Unknown action: {button.action}"
     
     @staticmethod
@@ -578,6 +622,17 @@ class GameStateManager:
                 explanation = "Action completed. Checking for discard and victory..."
                 buttons = [
                     ActionButton("Continue", "continue_to_confirm_round")
+                ]
+                return CurrentAction(session.current_state, explanation, buttons)
+                
+            case GameState.DISCARD_TOKENS:
+                player = desk.current_player
+                current_count = player.get_token_count()
+                need_to_discard = current_count - 10
+                selected_count = len(session.current_selection)
+                explanation = f"Discard {need_to_discard} tokens (selected: {selected_count}/{need_to_discard})"
+                buttons = [
+                    ActionButton("Confirm Discard", "confirm_discard", enabled=(selected_count == need_to_discard))
                 ]
                 return CurrentAction(session.current_state, explanation, buttons)
                 

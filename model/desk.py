@@ -191,6 +191,16 @@ class Desk:
 
                 player.pay_for_card(card, self.bag)
 
+            case ActionType.DISCARD_TOKENS:
+                tokens_to_discard = action.payload["tokens"]
+                # Count tokens by type
+                discard_counts: Dict[Token, int] = {}
+                for token in tokens_to_discard:
+                    discard_counts[token] = discard_counts.get(token, 0) + 1
+                # Remove tokens from player and return to bag
+                player.remove_tokens(discard_counts)
+                self.bag.return_tokens(tokens_to_discard)
+
         # TODO: handle victory and turn advance in the controller
         # # After any action, check victory
         # if player.has_won():

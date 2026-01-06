@@ -13,12 +13,14 @@ class ActionType(Enum):
         PURCHASE_CARD          - Purchase a card from the board or reserved.
         USE_PRIVILEGE          - Spend a privilege scroll to gain a token.
         REPLENISH_BOARD        - Refill board tokens or cards when required.
+        DISCARD_TOKENS         - Discard tokens when player has more than 10.
     """
     TAKE_TOKENS = "TAKE_TOKENS"
     TAKE_GOLD_AND_RESERVE = "TAKE_GOLD_AND_RESERVE"
     PURCHASE_CARD = "PURCHASE_CARD"
     USE_PRIVILEGE = "USE_PRIVILEGE"
     REPLENISH_BOARD = "REPLENISH_BOARD"
+    DISCARD_TOKENS = "DISCARD_TOKENS"
 
 
 class Action:

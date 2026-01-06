@@ -97,8 +97,8 @@ class GameView:
         
         self.draw_background()
         self.draw_main_panel(desk, dialogue, self.view_split.children["main"])
-        self.draw_player_panel(desk.players[0], self.right_split.children["player1"])
-        self.draw_player_panel(desk.players[1], self.right_split.children["player2"])
+        self.draw_player_panel(desk.players[0], self.right_split.children["player1"], is_current_player=(desk.current_player_index == 0))
+        self.draw_player_panel(desk.players[1], self.right_split.children["player2"], is_current_player=(desk.current_player_index == 1))
         self.draw_action_panel(desk, self.action_panel_rect, current_action)
 
         # highlight the selected element
@@ -154,7 +154,7 @@ class GameView:
         )
         self.screen.blit(bg, (0, 0))
 
-    def draw_player_panel(self, player: Any, rect: Any) -> None:
+    def draw_player_panel(self, player: Any, rect: Any, is_current_player: bool = False) -> None:
         """
         Draw the player panel, including name, score, counters, tokens, cards, and reserved cards.
         """
@@ -185,7 +185,7 @@ class GameView:
         self._draw_player_name(player, Margin(player_panel.children["player_name"], (MARGIN_SMALL,)*4).rect)
         self._draw_score_tracker(player, Margin(player_panel.children["score_tracker"], (MARGIN_SMALL,)*4).rect)
         self._draw_privilege_royal_token_counter(player, Margin(player_panel.children["counters"], (MARGIN_SMALL,)*4).rect)
-        self._draw_token_area(player.tokens, Margin(player_panel.children["tokens_sum"], (MARGIN_SMALL,)*4).rect)
+        self._draw_token_area(player.tokens, Margin(player_panel.children["tokens_sum"], (MARGIN_SMALL,)*4).rect, player_name=player.name, clickable=is_current_player)
         self._draw_card_area(player.bonuses, Margin(player_panel.children["cards_sum"], (MARGIN_SMALL,)*4).rect)
         self._draw_reserved_cards(player.reserved, Margin(player_panel.children["reserved"], (MARGIN_SMALL,)*4).rect)
 
@@ -306,7 +306,7 @@ class GameView:
             ),
         )
 
-    def _draw_token(self, counts: Dict[Any, int], split: Any, color: str) -> None:
+    def _draw_token(self, counts: Dict[Any, int], split: Any, color: str, player_name: str = None, clickable: bool = False) -> None:
         """
         Draw a single token of the given color and its count.
         """
@@ -322,8 +322,20 @@ class GameView:
                 to_rect(split.children[color]).y + 10,
             ),
         )
+        
+        # Register for clicking if in discard mode
+        if clickable and player_name and counts.get(Token(color), 0) > 0:
+            token_rect = pygame.Rect(x, y, sclaled_token.get_width(), sclaled_token.get_height())
+            # Register each individual token for selection
+            for i in range(counts.get(Token(color), 0)):
+                self.layout_registry.register(
+                    f"player_token_{player_name}_{color}_{i}",
+                    token_rect,
+                    Token(color),
+                    {"player": player_name, "color": color, "index": i}
+                )
 
-    def _draw_token_area(self, counts: Dict[Any, int], rect: Any) -> None:
+    def _draw_token_area(self, counts: Dict[Any, int], rect: Any, player_name: str = None, clickable: bool = False) -> None:
         """
         Draw all tokens for a player in a grid layout.
         """
@@ -340,9 +352,9 @@ class GameView:
             [("black", 1), ("blue", 1), ("red", 1), ("green", 1), ("white", 1)],
         )
         for color in ["gold", "pearl"]:
-            self._draw_token(counts, first_row_split, color)
+            self._draw_token(counts, first_row_split, color, player_name, clickable)
         for color in ["black", "blue", "red", "green", "white"]:
-            self._draw_token(counts, second_row_split, color)
+            self._draw_token(counts, second_row_split, color, player_name, clickable)
 
     def _draw_card_shape(self, rect: pygame.Rect, fill_color: Any = WHITE, alpha: int = ALPHA_SEMI, border_radius: int = BORDER_RADIUS_DEFAULT) -> None:
         """
