@@ -325,7 +325,7 @@ class GameView:
         
         # Register for clicking if in discard mode
         if clickable and player_name and counts.get(Token(color), 0) > 0:
-            token_rect = pygame.Rect(x, y, sclaled_token.get_width(), sclaled_token.get_height())
+            token_rect = to_rect(split.children[color])
             # Register each individual token for selection
             for i in range(counts.get(Token(color), 0)):
                 self.layout_registry.register(

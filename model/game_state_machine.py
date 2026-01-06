@@ -71,7 +71,7 @@ class GameStateConfig:
         GameState.TAKE_TOKENS: SelectionRules(["Token"], 3, 1, {"no_gold": True}),
         GameState.TAKE_GOLD_AND_RESERVE: SelectionRules(["Token", "Card", "Deck"], 2, 2, {"require_gold": True, "require_card": True}),
         GameState.POST_ACTION_CHECKS: SelectionRules([], 0),
-        GameState.DISCARD_TOKENS: SelectionRules(["Token"], 10, 1, {"discard_mode": True, "player_tokens_only": True}),
+        GameState.DISCARD_TOKENS: SelectionRules(["Token"], 10, 1, {"discard_mode": True, "player_tokens_only": True, "allow_partial": True}),
         GameState.CONFIRM_ROUND: SelectionRules([], 0),
     }
     
@@ -511,21 +511,32 @@ class GameStateManager:
                 player = desk.current_player
                 tokens_to_discard = session.current_selection
                 
-                # Validate that we'll have exactly 10 tokens after discard
+                # Validate selection
                 current_count = player.get_token_count()
                 discard_count = len(tokens_to_discard)
                 remaining = current_count - discard_count
                 
-                if remaining != 10:
-                    return session, None, f"Must discard {current_count - 10} tokens (currently selected: {discard_count})"
+                # Must select at least 1 token
+                if discard_count == 0:
+                    return session, None, "Must select at least 1 token to discard"
                 
+                # Cannot discard more than needed (would leave player with <10 tokens)
+                if remaining < 10:
+                    return session, None, f"Cannot discard {discard_count} tokens - would leave you with only {remaining}"
+
                 # Create action to discard tokens
                 action = Action(ActionType.DISCARD_TOKENS, {
                     "tokens": [elem.element for elem in tokens_to_discard]
                 })
                 
-                new_session = session.with_state_and_selection(GameState.CONFIRM_ROUND, [])
-                return new_session, action, "Tokens discarded successfully"
+                # Check if player still needs to discard more
+                if remaining > 10:
+                    new_session = session.with_state_and_selection(GameState.DISCARD_TOKENS, [])
+                    return new_session, action, f"Discarded {discard_count} token(s). Still have {remaining} - discard {remaining - 10} more."
+                else:
+                    new_session = session.with_state_and_selection(GameState.CONFIRM_ROUND, [])
+                    return new_session, action, "Tokens discarded successfully"
+
         return session, None, f"Unknown action: {button.action}"
     
     @staticmethod
@@ -630,9 +641,9 @@ class GameStateManager:
                 current_count = player.get_token_count()
                 need_to_discard = current_count - 10
                 selected_count = len(session.current_selection)
-                explanation = f"Discard {need_to_discard} tokens (selected: {selected_count}/{need_to_discard})"
+                explanation = f"You have {current_count} tokens. Discard at least 1 (selected: {selected_count})"
                 buttons = [
-                    ActionButton("Confirm Discard", "confirm_discard", enabled=(selected_count == need_to_discard))
+                    ActionButton("Confirm Discard", "confirm_discard", enabled=(selected_count > 0))
                 ]
                 return CurrentAction(session.current_state, explanation, buttons)
                 
