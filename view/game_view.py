@@ -572,14 +572,13 @@ class GameView:
                 )
                 self.screen.blit(scaled_royal, (x, y))
                 
-                # Royal card is not clickable
-                # # Register royal card for click detection
-                # self.layout_registry.register(
-                #     f"royal_{i}",
-                #     pygame.Rect(x, y, scaled_royal.get_width(), scaled_royal.get_height()),
-                #     desk.royals[i],
-                #     {"index": i}
-                # )
+                # Register royal card for click detection
+                self.layout_registry.register(
+                    f"royal_{i}",
+                    pygame.Rect(x, y, scaled_royal.get_width(), scaled_royal.get_height()),
+                    desk.royals[i],
+                    {"index": i}
+                )
 
     def _draw_dialogue_panel(self, text: str, rect: Any) -> None:
         """

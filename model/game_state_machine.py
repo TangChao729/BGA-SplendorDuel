@@ -29,8 +29,9 @@ class GameState(Enum):
 
     # Post-action checks
     POST_ACTION_CHECKS          = "post_action_checks"      # DONE
-    DISCARD_TOKENS              = "discard_tokens"          # TODO
-    ROYAL_SELECTION             = "royal_selection"         # TODO
+    CHECK_DISCARD               = "check_discard"           # DONE
+    DISCARD_TOKENS              = "discard_tokens"          # DONE
+    ROYAL_SELECTION             = "royal_selection"         # DONE
     CARD_ABILITY_2ND_TURN       = "card_ability_2nd_turn"   # TODO
     CARD_ABILITY_JOKER          = "card_ability_joker"      # TODO
     CARD_ABILITY_2ND_COLOR      = "card_ability_2nd_color"  # TODO
@@ -71,7 +72,9 @@ class GameStateConfig:
         GameState.TAKE_TOKENS: SelectionRules(["Token"], 3, 1, {"no_gold": True}),
         GameState.TAKE_GOLD_AND_RESERVE: SelectionRules(["Token", "Card", "Deck"], 2, 2, {"require_gold": True, "require_card": True}),
         GameState.POST_ACTION_CHECKS: SelectionRules([], 0),
+        GameState.CHECK_DISCARD: SelectionRules([], 0),
         GameState.DISCARD_TOKENS: SelectionRules(["Token"], 10, 1, {"discard_mode": True, "player_tokens_only": True, "allow_partial": True}),
+        GameState.ROYAL_SELECTION: SelectionRules(["Royal"], 1, 1),
         GameState.CONFIRM_ROUND: SelectionRules([], 0),
     }
     
@@ -311,8 +314,14 @@ class GameStateManager:
             case GameState.POST_ACTION_CHECKS:
                 return GameStateManager._handle_post_action_checks_buttons(session, button, desk)
                 
+            case GameState.CHECK_DISCARD:
+                return GameStateManager._handle_check_discard_buttons(session, button, desk)
+                
             case GameState.DISCARD_TOKENS:
                 return GameStateManager._handle_discard_tokens_buttons(session, button, desk)
+                
+            case GameState.ROYAL_SELECTION:
+                return GameStateManager._handle_royal_selection_buttons(session, button, desk)
                 
             case GameState.CONFIRM_ROUND:
                 return GameStateManager._handle_confirm_round_buttons(session, button, desk)
@@ -493,8 +502,27 @@ class GameStateManager:
         """Handle buttons in POST_ACTION_CHECKS state."""
         match button.action:
             case "continue_to_confirm_round":
-                # Check if player needs to discard tokens
                 player = desk.current_player
+                
+                # Check if player qualifies for a royal card (before discard check)
+                if player.qualifies_for_royal() and len(desk.royals) > 0:
+                    new_session = session.with_state(GameState.ROYAL_SELECTION)
+                    crown_milestone = 3 if 3 not in player.royals_claimed_at else 6
+                    return new_session, None, f"You reached {crown_milestone} crowns! Select a royal card."
+                
+                # Otherwise, proceed to check discard
+                new_session = session.with_state(GameState.CHECK_DISCARD)
+                return new_session, None, "Checking token count..."
+        return session, None, f"Unknown action: {button.action}"
+    
+    @staticmethod
+    def _handle_check_discard_buttons(session: GameSessionState, button: ActionButton, desk: Any) -> Tuple[GameSessionState, Optional[Action], str]:
+        """Handle buttons in CHECK_DISCARD state - automatically routes to discard or confirm."""
+        match button.action:
+            case "continue":
+                player = desk.current_player
+                
+                # Check if player needs to discard tokens
                 if player.get_token_count() > 10:
                     new_session = session.with_state(GameState.DISCARD_TOKENS)
                     return new_session, None, f"You have {player.get_token_count()} tokens. Discard down to 10."
@@ -529,14 +557,35 @@ class GameStateManager:
                     "tokens": [elem.element for elem in tokens_to_discard]
                 })
                 
-                # Check if player still needs to discard more
-                if remaining > 10:
-                    new_session = session.with_state_and_selection(GameState.DISCARD_TOKENS, [])
-                    return new_session, action, f"Discarded {discard_count} token(s). Still have {remaining} - discard {remaining - 10} more."
-                else:
-                    new_session = session.with_state_and_selection(GameState.CONFIRM_ROUND, [])
-                    return new_session, action, "Tokens discarded successfully"
+                # After discarding, route to CHECK_DISCARD to see if more discarding is needed
+                new_session = session.with_state_and_selection(GameState.CHECK_DISCARD, [])
+                return new_session, action, f"Discarded {discard_count} token(s). Checking token count..."
 
+        return session, None, f"Unknown action: {button.action}"
+    
+    @staticmethod
+    def _handle_royal_selection_buttons(session: GameSessionState, button: ActionButton, desk: Any) -> Tuple[GameSessionState, Optional[Action], str]:
+        """Handle buttons in ROYAL_SELECTION state."""
+        match button.action:
+            case "confirm_royal":
+                can_confirm, reason = GameStateManager.can_confirm_selection(session, desk)
+                if not can_confirm:
+                    return session, None, reason
+                
+                # Get the selected royal
+                selected_element = session.current_selection[0]
+                selected_royal = selected_element.element
+                royal_index = selected_element.metadata.get("index")
+                
+                # Create the action
+                action = Action(ActionType.CLAIM_ROYAL, {
+                    "royal": selected_royal,
+                    "index": royal_index
+                })
+                
+                # After claiming royal, route to CHECK_DISCARD
+                new_session = session.with_state_and_selection(GameState.CHECK_DISCARD, [])
+                return new_session, action, "Royal claimed! Checking token count..."
         return session, None, f"Unknown action: {button.action}"
     
     @staticmethod
@@ -636,6 +685,13 @@ class GameStateManager:
                 ]
                 return CurrentAction(session.current_state, explanation, buttons)
                 
+            case GameState.CHECK_DISCARD:
+                explanation = "Checking token count..."
+                buttons = [
+                    ActionButton("Continue", "continue")
+                ]
+                return CurrentAction(session.current_state, explanation, buttons)
+                
             case GameState.DISCARD_TOKENS:
                 player = desk.current_player
                 current_count = player.get_token_count()
@@ -644,6 +700,16 @@ class GameStateManager:
                 explanation = f"You have {current_count} tokens. Discard at least 1 (selected: {selected_count})"
                 buttons = [
                     ActionButton("Confirm Discard", "confirm_discard", enabled=(selected_count > 0))
+                ]
+                return CurrentAction(session.current_state, explanation, buttons)
+                
+            case GameState.ROYAL_SELECTION:
+                player = desk.current_player
+                crown_milestone = 3 if 3 not in player.royals_claimed_at else 6
+                selected_count = len(session.current_selection)
+                explanation = f"Congratulations! You reached {crown_milestone} crowns. Select a royal card."
+                buttons = [
+                    ActionButton("Confirm Royal", "confirm_royal", enabled=(selected_count == 1))
                 ]
                 return CurrentAction(session.current_state, explanation, buttons)
                 

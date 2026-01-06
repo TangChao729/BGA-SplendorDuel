@@ -120,7 +120,14 @@ START_OF_ROUND
         └── TAKE_GOLD_AND_RESERVE → POST_ACTION_CHECKS
 
 POST_ACTION_CHECKS
-    └── CONFIRM_ROUND → START_OF_ROUND (next player)
+    ├── ROYAL_SELECTION (if qualified) → CHECK_DISCARD
+    └── CHECK_DISCARD → [DISCARD_TOKENS or CONFIRM_ROUND]
+
+DISCARD_TOKENS
+    └── CHECK_DISCARD → [DISCARD_TOKENS again or CONFIRM_ROUND]
+
+CONFIRM_ROUND
+    └── START_OF_ROUND (next player)
 ```
 
 See `support/state_changing.md` for detailed state transitions.
@@ -144,15 +151,17 @@ See `support/state_changing.md` for detailed state transitions.
 | TAKE_TOKENS action | ✅ Done |
 | TAKE_GOLD_AND_RESERVE action | ✅ Done |
 | POST_ACTION_CHECKS state | ✅ Done |
+| CHECK_DISCARD state | ✅ Done |
 | DISCARD_TOKENS state | ✅ Done |
+| ROYAL_SELECTION state | ✅ Done |
 | CONFIRM_ROUND state | ✅ Done |
 | Unit tests (52 passing) | ✅ Done |
+| Discard tokens state | ✅ Done |
 
 ### 🚧 TODO - Remaining Features
 
 | Feature | Location | Notes |
 |---------|----------|-------|
-| ROYAL_SELECTION state | `game_state_machine.py:33` | When player qualifies for a royal |
 | Card Abilities - 2nd Turn | `game_state_machine.py:34` | Cards that grant extra turns |
 | Card Abilities - Joker | `game_state_machine.py:35` | Wild color bonus |
 | Card Abilities - 2nd Color | `game_state_machine.py:36` | Cards with dual color bonus |

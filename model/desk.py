@@ -201,6 +201,20 @@ class Desk:
                 player.remove_tokens(discard_counts)
                 self.bag.return_tokens(tokens_to_discard)
 
+            case ActionType.CLAIM_ROYAL:
+                royal = action.payload["royal"]
+                royal_index = action.payload["index"]
+                
+                # Remove royal from available royals
+                if royal_index < len(self.royals):
+                    claimed_royal = self.royals.pop(royal_index)
+                    player.claim_royal(claimed_royal)
+                    
+                    # Apply royal ability if it has one
+                    if claimed_royal.ability == "PRIVILEGE":
+                        player.add_privilege(1)
+                    # Other abilities (STEAL, TURN) will be handled in future implementations
+
         # TODO: handle victory and turn advance in the controller
         # # After any action, check victory
         # if player.has_won():

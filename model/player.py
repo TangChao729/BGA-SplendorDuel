@@ -38,6 +38,9 @@ class PlayerState:
         self.card_points: Dict[str, int] = {
             c: 0 for c in ["black", "red", "green", "blue", "white"]
         }
+        # Royal cards claimed
+        self.royals: List[Any] = []  # List of Royal objects
+        self.royals_claimed_at: List[int] = []  # Track at which crown count royals were claimed
 
     # add token by color str
     def add_tokens(self, list_tokens: List[Token]) -> None:
@@ -171,6 +174,32 @@ class PlayerState:
         Get the total number of tokens the player has
         """
         return sum(self.tokens.values())
+    
+    def qualifies_for_royal(self) -> bool:
+        """
+        Check if player qualifies for a royal card (3rd or 6th crown).
+        Returns True if they just reached 3 or 6 crowns and haven't claimed yet.
+        """
+        # Check if at 3 crowns and haven't claimed first royal
+        if self.crowns >= 3 and 3 not in self.royals_claimed_at:
+            return True
+        # Check if at 6 crowns and haven't claimed second royal
+        if self.crowns >= 6 and 6 not in self.royals_claimed_at:
+            return True
+        return False
+    
+    def claim_royal(self, royal: Any) -> None:
+        """
+        Claim a royal card and mark the crown count.
+        """
+        self.royals.append(royal)
+        # Mark which milestone this was claimed at
+        if 3 not in self.royals_claimed_at and self.crowns >= 3:
+            self.royals_claimed_at.append(3)
+        elif 6 not in self.royals_claimed_at and self.crowns >= 6:
+            self.royals_claimed_at.append(6)
+        # Apply royal benefits
+        self.points += royal.points
 
     def to_json(self) -> Dict[str, Any]:
         """
@@ -188,7 +217,9 @@ class PlayerState:
             "privileges": self.privileges,
             "crowns": self.crowns,
             "points": self.points,
-            "card_points": self.card_points.copy()
+            "card_points": self.card_points.copy(),
+            "royals": [royal.to_dict() for royal in self.royals],
+            "royals_claimed_at": self.royals_claimed_at.copy()
         }
 
     @classmethod
