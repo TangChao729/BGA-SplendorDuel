@@ -563,21 +563,26 @@ class GameView:
         self._draw_boarder(rect)
         royals = self.assets.card_sprites["royal"]
         split = HSplit(rect, [("royal_1", 1), ("royal_2", 1), ("royal_3", 1), ("royal_4", 1)])
-        for i in range(4):
-            if i < len(desk.royals):
-                sub_rect = Margin(split.children[f"royal_{i+1}"], (MARGIN_SMALL,)*4).rect
+        
+        # Draw each royal slot (0-3)
+        for slot_index in range(4):
+            royal = desk.royals.get(slot_index)
+            
+            # Only draw if royal exists in this slot
+            if royal is not None:
+                sub_rect = Margin(split.children[f"royal_{slot_index+1}"], (MARGIN_SMALL,)*4).rect
                 self._draw_boarder(sub_rect)
                 scaled_royal, (x, y) = self._scale_image_to_fit(
-                    self.assets.card_sprites["royal"][i], sub_rect, margin=0
+                    self.assets.card_sprites["royal"][slot_index], sub_rect, margin=0
                 )
                 self.screen.blit(scaled_royal, (x, y))
                 
                 # Register royal card for click detection
                 self.layout_registry.register(
-                    f"royal_{i}",
+                    f"royal_{slot_index}",
                     pygame.Rect(x, y, scaled_royal.get_width(), scaled_royal.get_height()),
-                    desk.royals[i],
-                    {"index": i}
+                    royal,
+                    {"index": slot_index}
                 )
 
     def _draw_dialogue_panel(self, text: str, rect: Any) -> None:

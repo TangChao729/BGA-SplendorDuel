@@ -505,7 +505,9 @@ class GameStateManager:
                 player = desk.current_player
                 
                 # Check if player qualifies for a royal card (before discard check)
-                if player.qualifies_for_royal() and len(desk.royals) > 0:
+                # Check if any royals are still available (not None)
+                available_royals = any(royal is not None for royal in desk.royals.values())
+                if player.qualifies_for_royal() and available_royals:
                     new_session = session.with_state(GameState.ROYAL_SELECTION)
                     crown_milestone = 3 if 3 not in player.royals_claimed_at else 6
                     return new_session, None, f"You reached {crown_milestone} crowns! Select a royal card."
@@ -593,11 +595,19 @@ class GameStateManager:
         """Handle buttons in CONFIRM_ROUND state."""
         match button.action:
             case "finish_round":
-                desk.next_player()
-                new_session = session.with_state_and_selection(GameState.START_OF_ROUND, [])
-                return new_session, None, "Round finished - next player's turn"
+                # Check if player has an extra turn from TURN ability
+                if desk.has_extra_turn():
+                    desk.clear_extra_turn()
+                    new_session = session.with_state_and_selection(GameState.START_OF_ROUND, [])
+                    return new_session, None, f"Extra turn! {desk.current_player.name} goes again!"
+                else:
+                    desk.next_player()
+                    new_session = session.with_state_and_selection(GameState.START_OF_ROUND, [])
+                    return new_session, None, "Round finished - next player's turn"
             case "rollback_to_start":
                 # The controller will handle the actual rollback
+                # Clear extra turn flag on rollback
+                desk.clear_extra_turn()
                 new_session = session.with_state_and_selection(GameState.START_OF_ROUND, [])
                 return new_session, None, "Rolled back to start of round"
         return session, None, f"Unknown action: {button.action}"
@@ -714,7 +724,9 @@ class GameStateManager:
                 return CurrentAction(session.current_state, explanation, buttons)
                 
             case GameState.CONFIRM_ROUND:
-                explanation = "Finish this round?"
+                # Check if player has extra turn
+                extra_turn_msg = " (Extra Turn!)" if desk.has_extra_turn() else ""
+                explanation = f"Finish this round?{extra_turn_msg}"
                 buttons = [
                     ActionButton("Yes", "finish_round"),
                     ActionButton("No", "rollback_to_start")

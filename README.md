@@ -155,6 +155,7 @@ See `support/state_changing.md` for detailed state transitions.
 | DISCARD_TOKENS state | ✅ Done |
 | ROYAL_SELECTION state | ✅ Done |
 | CONFIRM_ROUND state | ✅ Done |
+| Card Ability - TURN | ✅ Done |
 | Unit tests (52 passing) | ✅ Done |
 | Discard tokens state | ✅ Done |
 
@@ -162,9 +163,8 @@ See `support/state_changing.md` for detailed state transitions.
 
 | Feature | Location | Notes |
 |---------|----------|-------|
-| Card Abilities - 2nd Turn | `game_state_machine.py:34` | Cards that grant extra turns |
-| Card Abilities - Joker | `game_state_machine.py:35` | Wild color bonus |
-| Card Abilities - 2nd Color | `game_state_machine.py:36` | Cards with dual color bonus |
+| Card Abilities - Joker (1 COLOR) | `game_state_machine.py:35` | Wild color bonus |
+| Card Abilities - Take Token (TAKE 2ND SAME) | `game_state_machine.py:36` | Take token matching card color |
 | Card Abilities - Privilege | `game_state_machine.py:37` | Cards that grant privileges |
 | Card Abilities - Steal | `game_state_machine.py:38` | Steal from opponent |
 | Victory condition handling | `desk.py:194` | Check win in controller |

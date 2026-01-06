@@ -38,8 +38,9 @@ class Desk:
         self.bag = Bag(tokens)
         self.board = Board()
         # self.board.fill_grid(self.bag.draw())
-        # Royal cards pool
-        self.royals: List[Royal] = Royal.from_json(royal_json)
+        # Royal cards pool - Dict mapping slot position (0-3) to Royal or None
+        royals_list = Royal.from_json(royal_json)
+        self.royals: Dict[int, Optional[Royal]] = {i: royal for i, royal in enumerate(royals_list)}
         # Privileges (scrolls) pool above board
         self.privileges: int = initial_privileges
         # Two-player states
@@ -49,6 +50,8 @@ class Desk:
         self.current_player_index: int = 0
         # Winner index when game ends
         self.winner: Optional[int] = None
+        # Extra turn flag (for TURN ability cards)
+        self.extra_turn: bool = False
 
     @property
     def current_player(self) -> PlayerState:
@@ -63,6 +66,24 @@ class Desk:
         Advance turn to the other player.
         """
         self.current_player_index = 1 - self.current_player_index
+    
+    def grant_extra_turn(self) -> None:
+        """
+        Grant an extra turn to the current player (from TURN ability).
+        """
+        self.extra_turn = True
+    
+    def has_extra_turn(self) -> bool:
+        """
+        Check if current player has an extra turn.
+        """
+        return self.extra_turn
+    
+    def clear_extra_turn(self) -> None:
+        """
+        Clear the extra turn flag.
+        """
+        self.extra_turn = False
 
     def legal_take_tokens(self) -> List[Action]:
         actions: List[Action] = []
@@ -190,6 +211,15 @@ class Desk:
                     self.pyramid.fill_card(level, idx)
 
                 player.pay_for_card(card, self.bag)
+                
+                # Handle card abilities
+                if card.ability == "TURN":
+                    self.grant_extra_turn()
+                else:
+                    pass
+                # Combo ability - both joker and extra turn
+                    self.grant_extra_turn()
+                    # TODO: Handle 1 COLOR part when implementing joker ability
 
             case ActionType.DISCARD_TOKENS:
                 tokens_to_discard = action.payload["tokens"]
@@ -205,12 +235,15 @@ class Desk:
                 royal = action.payload["royal"]
                 royal_index = action.payload["index"]
                 
-                # Remove royal from available royals
-                if royal_index < len(self.royals):
-                    claimed_royal = self.royals.pop(royal_index)
+                # Remove royal from available royals (set slot to None)
+                if royal_index in self.royals and self.royals[royal_index] is not None:
+                    claimed_royal = self.royals[royal_index]
+                    self.royals[royal_index] = None  # Mark slot as empty
                     player.claim_royal(claimed_royal)
                     
                     # Apply royal ability if it has one
+                    if claimed_royal.ability == "TURN":
+                        self.grant_extra_turn()
                     if claimed_royal.ability == "PRIVILEGE":
                         player.add_privilege(1)
                     # Other abilities (STEAL, TURN) will be handled in future implementations
