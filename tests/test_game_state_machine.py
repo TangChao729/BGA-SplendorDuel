@@ -255,4 +255,147 @@ class TestGameStateManager:
         assert current_action.state == GameState.START_OF_ROUND
         assert isinstance(current_action.explanation, str)
         assert isinstance(current_action.buttons, list)
-        assert len(current_action.buttons) > 0  # Should have some buttons 
+        assert len(current_action.buttons) > 0  # Should have some buttons
+
+
+class TestCardAbility2ndColor:
+    """Test the CARD_ABILITY_2ND_COLOR state (TAKE 2ND SAME ability)."""
+    
+    @pytest.fixture
+    def mock_desk_with_ability(self):
+        """Create mock desk with pending_ability_card_color."""
+        desk = Mock()
+        desk.pending_ability_card_color = "BLACK"
+        desk.current_player = Mock()
+        desk.current_player.name = "Player 1"
+        return desk
+    
+    def test_card_ability_2nd_color_selection_rules(self):
+        """Test that selection rules exist for CARD_ABILITY_2ND_COLOR."""
+        rules = GameStateConfig.get_selection_rules(GameState.CARD_ABILITY_2ND_COLOR)
+        assert "Token" in rules.allowed_types
+        assert rules.max_selections == 1
+        assert rules.min_selections == 0  # Optional selection
+        assert rules.special_rules.get("match_card_color") is True
+    
+    def test_can_select_matching_color_token(self, mock_desk_with_ability):
+        """Test that player can select token matching card color."""
+        session = GameSessionState(GameState.CARD_ABILITY_2ND_COLOR, [])
+        
+        # Mock a BLACK token on the board
+        layout_element = Mock()
+        layout_element.element = Mock()
+        layout_element.element.color = "black"
+        layout_element.metadata = {"position": (2, 3)}  # Board token
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_with_ability, "Token"
+        )
+        assert can_select is True
+        assert reason == ""
+    
+    def test_cannot_select_wrong_color_token(self, mock_desk_with_ability):
+        """Test that player cannot select token of different color."""
+        session = GameSessionState(GameState.CARD_ABILITY_2ND_COLOR, [])
+        
+        # Mock a RED token on the board (wrong color)
+        layout_element = Mock()
+        layout_element.element = Mock()
+        layout_element.element.color = "red"
+        layout_element.metadata = {"position": (2, 3)}  # Board token
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_with_ability, "Token"
+        )
+        assert can_select is False
+        assert "black" in reason.lower()
+    
+    def test_cannot_select_player_token(self, mock_desk_with_ability):
+        """Test that player cannot select their own tokens (only board tokens)."""
+        session = GameSessionState(GameState.CARD_ABILITY_2ND_COLOR, [])
+        
+        # Mock a player token (has "player" in metadata)
+        layout_element = Mock()
+        layout_element.element = Mock()
+        layout_element.element.color = "black"
+        layout_element.metadata = {"player": "Player 1"}  # Player token, not board token
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_with_ability, "Token"
+        )
+        assert can_select is False
+        assert "board" in reason.lower()
+    
+    def test_confirm_with_selection_creates_action(self, mock_desk_with_ability):
+        """Test that confirming with a selection creates TAKE_ABILITY_TOKEN action."""
+        # Create a selection
+        layout_element = Mock()
+        layout_element.element = Token("black")
+        layout_element.metadata = {"position": (2, 3)}
+        
+        session = GameSessionState(GameState.CARD_ABILITY_2ND_COLOR, [layout_element])
+        button = ActionButton("Confirm selection", "confirm_selection")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_with_ability
+        )
+        
+        assert new_session.current_state == GameState.POST_ACTION_CHECKS
+        assert action is not None
+        assert action.type == ActionType.TAKE_ABILITY_TOKEN
+        assert action.payload["token"] == layout_element.element
+        assert action.payload["position"] == (2, 3)
+        assert "black" in message.lower() or "token" in message.lower()
+    
+    def test_confirm_without_selection_skips(self, mock_desk_with_ability):
+        """Test that confirming without selection skips (no action created)."""
+        session = GameSessionState(GameState.CARD_ABILITY_2ND_COLOR, [])
+        button = ActionButton("Confirm selection", "confirm_selection")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_with_ability
+        )
+        
+        assert new_session.current_state == GameState.POST_ACTION_CHECKS
+        assert action is None
+        assert "skip" in message.lower()
+    
+    def test_get_current_action_shows_correct_ui(self, mock_desk_with_ability):
+        """Test that get_current_action returns correct UI for this state."""
+        session = GameSessionState(GameState.CARD_ABILITY_2ND_COLOR, [])
+        
+        current_action = GameStateManager.get_current_action(session, mock_desk_with_ability)
+        
+        assert current_action.state == GameState.CARD_ABILITY_2ND_COLOR
+        assert "black" in current_action.explanation.lower()
+        assert len(current_action.buttons) == 1
+        assert current_action.buttons[0].action == "confirm_selection"
+    
+    def test_purchase_card_with_ability_transitions_to_2nd_color_state(self, mock_desk_with_ability):
+        """Test that purchasing a card with TAKE 2ND SAME ability transitions to the correct state."""
+        # Create mock card with TAKE 2ND SAME ability
+        mock_card = Mock()
+        mock_card.ability = "TAKE 2ND SAME"
+        mock_card.color = "BLACK"
+        
+        # Create mock layout element for the card
+        layout_element = Mock()
+        layout_element.element = mock_card
+        layout_element.metadata = {"level": 1, "index": 0}
+        
+        # Set up desk to allow purchase
+        mock_desk_with_ability.current_player.can_afford = Mock(return_value=True)
+        
+        session = GameSessionState(GameState.PURCHASE_CARD, [layout_element])
+        button = ActionButton("Confirm", "confirm")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_with_ability
+        )
+        
+        # Should transition to CARD_ABILITY_2ND_COLOR state
+        assert new_session.current_state == GameState.CARD_ABILITY_2ND_COLOR
+        assert action is not None
+        assert action.type == ActionType.PURCHASE_CARD
+        # pending_ability_card_color should be set
+        assert mock_desk_with_ability.pending_ability_card_color == "BLACK" 

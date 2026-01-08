@@ -15,6 +15,7 @@ class ActionType(Enum):
         REPLENISH_BOARD        - Refill board tokens or cards when required.
         DISCARD_TOKENS         - Discard tokens when player has more than 10.
         CLAIM_ROYAL            - Claim a royal card when reaching 3rd or 6th crown.
+        TAKE_ABILITY_TOKEN     - Take a token from board as part of card ability (TAKE 2ND SAME).
     """
     TAKE_TOKENS = "TAKE_TOKENS"
     TAKE_GOLD_AND_RESERVE = "TAKE_GOLD_AND_RESERVE"
@@ -23,6 +24,7 @@ class ActionType(Enum):
     REPLENISH_BOARD = "REPLENISH_BOARD"
     DISCARD_TOKENS = "DISCARD_TOKENS"
     CLAIM_ROYAL = "CLAIM_ROYAL"
+    TAKE_ABILITY_TOKEN = "TAKE_ABILITY_TOKEN"
 
 
 class Action:

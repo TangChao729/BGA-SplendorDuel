@@ -52,6 +52,8 @@ class Desk:
         self.winner: Optional[int] = None
         # Extra turn flag (for TURN ability cards)
         self.extra_turn: bool = False
+        # Pending ability card color (for TAKE 2ND SAME ability)
+        self.pending_ability_card_color: Optional[str] = None
 
     @property
     def current_player(self) -> PlayerState:
@@ -269,6 +271,14 @@ class Desk:
                     if claimed_royal.ability == "PRIVILEGE":
                         self.grant_privilege_to_player(player)
                     # Other abilities (STEAL) will be handled in future implementations
+
+            case ActionType.TAKE_ABILITY_TOKEN:
+                # Take a token from the board as part of TAKE 2ND SAME ability
+                token = action.payload["token"]
+                position = action.payload["position"]
+                player.add_tokens(self.board.draw_tokens({token: [position]}))
+                # Clear the pending ability card color
+                self.pending_ability_card_color = None
 
         # TODO: handle victory and turn advance in the controller
         # # After any action, check victory

@@ -2,6 +2,32 @@
 
 A Python implementation of the board game **Splendor Duel** with a Pygame GUI.
 
+## 📊 Project Status Summary
+
+**Last Updated:** January 2026
+
+### What Works ✅
+- **Complete game loop** with state machine (11 states implemented)
+- **Full Pygame GUI** with clickable elements and visual feedback
+- **All mandatory actions**: Purchase cards, take tokens, take gold & reserve
+- **Optional actions**: Use privilege, replenish board
+- **Post-action flow**: Discard tokens, royal selection, round confirmation
+- **Card abilities**: TURN (extra turn), PRIVILEGE (gain scroll)
+- **52 passing unit tests** covering core game logic
+- **Rollback support** at end of round
+
+### What's Missing 🚧
+- **3 card abilities**: Joker (1 COLOR), Take Token (TAKE 2ND SAME), Steal
+- **Victory detection** in game loop (logic exists but not enforced)
+- **Rollback prevention** after certain committed actions
+- **Face-down deck reservations** (UI doesn't allow clicking decks)
+
+### Quick Assessment
+**~85% complete** - Core game is fully playable, missing some card abilities and polish.
+**Estimated time to finish:** 4-8 hours for remaining abilities + victory handling.
+
+---
+
 ## Quick Start
 
 ### Prerequisites
@@ -162,14 +188,16 @@ See `support/state_changing.md` for detailed state transitions.
 
 ### 🚧 TODO - Remaining Features
 
-| Feature | Location | Notes |
-|---------|----------|-------|
-| Card Abilities - Joker (1 COLOR) | Cards | Overlap bonus with another card |
-| Card Abilities - Take Token (TAKE 2ND SAME) | Cards | Take token matching card color |
-| Card Abilities - Steal | Cards | Steal token from opponent |
-| Victory condition handling | `desk.py:194` | Check win in controller |
-| Replenish/Reserve no-rollback | `game_state_machine.py:20` | Prevent rollback after certain actions |
-| Face-down deck reservations | `cards.py:205` | Reserve from top of deck |
+| Priority | Feature | Files to Modify | Estimated Time |
+|----------|---------|-----------------|----------------|
+| 🔴 High | **Joker Ability (1 COLOR)** | `game_state_machine.py` (add state)<br>`desk.py` (trigger state)<br>`player.py` (overlap logic) | 2-3 hours |
+| 🔴 High | **Take Token Ability (TAKE 2ND SAME)** | `game_state_machine.py` (add state)<br>`desk.py` (trigger + execute) | 1 hour |
+| 🔴 High | **Steal Ability** | `game_state_machine.py` (add state)<br>`desk.py` (trigger + execute) | 1 hour |
+| 🟡 Medium | **Victory Condition Enforcement** | `game_controller.py` (check after confirm)<br>`game_view.py` (victory screen) | 1-2 hours |
+| 🟡 Medium | **Rollback Prevention** | `game_state_machine.py` (add committed flag)<br>`desk.py` (track committed actions) | 1 hour |
+| 🟢 Low | **Face-down Deck Reservations** | `game_view.py` (make decks clickable)<br>`game_state_machine.py` (handle deck selection) | 30 min |
+
+**Total Estimated Time to Complete:** 6.5-9.5 hours
 
 ### 🔮 Future Enhancements
 
@@ -221,9 +249,63 @@ All Pygame rendering:
 
 ---
 
-## Development Notes
+## Development Guide
 
-### Adding a New State
+### 🎯 Where to Continue Development
+
+Based on the current state, here are the **next priority tasks**:
+
+#### 1. **Card Abilities (High Priority)** 
+The main gameplay loop is complete, but several card abilities need implementation:
+
+- **"1 COLOR" (Joker)** - Most complex ability
+  - When purchased, must overlap with an existing bonus card
+  - Takes the color of the overlapped card
+  - Location: `model/desk.py` line 243 (TODO comment)
+  - Requires: New state `CARD_ABILITY_JOKER` for card selection UI
+  
+- **"TAKE 2ND SAME"** - Take token matching card color
+  - After purchasing, take 1 token from board matching card's color
+  - Requires: New state `CARD_ABILITY_2ND_COLOR` for token selection
+  
+- **"STEAL"** - Steal token from opponent
+  - After purchasing, take 1 Gem/Pearl token from opponent
+  - Requires: New state `CARD_ABILITY_STEAL` for token selection
+  
+- **"1 COLOR/TURN"** - Combo ability (Joker + Extra Turn)
+  - Currently only grants extra turn (line 242 in `desk.py`)
+  - Needs joker logic added
+
+#### 2. **Victory Condition Handling (Medium Priority)**
+- Currently checked in `player.py:has_won()` but not enforced in game loop
+- Need to add victory check in `GameController` after `CONFIRM_ROUND`
+- Display winner and end game gracefully
+- Location: `controller/game_controller.py`
+
+#### 3. **Rollback Prevention (Medium Priority)**
+- After replenishing board or reserving face-down cards, prevent rollback
+- Currently players can always rollback at `CONFIRM_ROUND`
+- Add flag to track "committed" actions
+- Location: `model/game_state_machine.py` line 20 (TODO comment)
+
+#### 4. **Face-down Deck Reservations (Low Priority)**
+- Currently can only reserve visible pyramid cards
+- Should allow clicking on deck to reserve top card
+- Location: UI needs to make decks clickable in `TAKE_GOLD_AND_RESERVE` state
+
+### 📝 Development Workflow
+
+#### Adding a New Card Ability
+
+1. **Define the state** in `GameState` enum (`model/game_state_machine.py`)
+2. **Add selection rules** in `GameStateConfig.SELECTION_RULES`
+3. **Create handler** method `_handle_<ability>_buttons()` in `GameStateManager`
+4. **Add button handling** in `handle_button_click()` match statement
+5. **Add UI buttons** in `get_current_action()` 
+6. **Trigger from purchase** in `desk.apply_action()` under `PURCHASE_CARD` case
+7. **Write tests** in `tests/test_game_state_machine.py` and `tests/test_desk.py`
+
+#### Adding a New State
 
 1. Add the state to `GameState` enum in `game_state_machine.py`
 2. Add selection rules in `GameStateConfig.SELECTION_RULES`
@@ -232,10 +314,10 @@ All Pygame rendering:
 5. Add case to `get_current_action()` for UI buttons
 6. Write tests in `tests/test_game_state_machine.py`
 
-### Testing
+### 🧪 Testing
 
 ```bash
-# Run all tests
+# Run all tests (currently 52 passing)
 pytest -v
 
 # Run specific test file
@@ -243,7 +325,39 @@ pytest tests/test_game_state_machine.py -v
 
 # Run with coverage (if installed)
 pytest --cov=model --cov=controller --cov=view
+
+# Run tests in watch mode (requires pytest-watch)
+ptw
 ```
+
+### 🐛 Debugging Tips
+
+1. **Check message history** - Bottom of game window shows action log
+2. **Print desk state** - Add `print(desk.to_dict())` in controller
+3. **Inspect selection** - Check `session_state.current_selection` 
+4. **Visual asset checker** - Run `tests/visual_asset_checker.py` to verify images load
+5. **State transitions** - Refer to `support/state_changing.md` for flow diagram
+
+### 📂 Key Files to Know
+
+| File | Purpose | Lines |
+|------|---------|-------|
+| `model/desk.py` | Core game engine, action execution | 315 |
+| `model/game_state_machine.py` | State management, UI logic | 736 |
+| `controller/game_controller.py` | Pygame loop, input handling | ~200 |
+| `view/game_view.py` | All rendering logic | ~600 |
+| `model/player.py` | Player state, affordability, victory | ~250 |
+| `model/cards.py` | Card, Deck, Pyramid classes | ~250 |
+| `model/tokens.py` | Token, Bag, Board classes | ~400 |
+
+### 🎨 Code Style
+
+- **Type hints required** for all new Python files (workspace rule)
+- **pytest** for all tests (workspace rule)
+- Use **dataclasses** for data structures
+- Use **match/case** for state handling (Python 3.10+)
+- Keep **stateless** functions in `GameStateManager`
+- Keep **state mutations** in `Desk.apply_action()`
 
 ---
 

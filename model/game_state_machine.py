@@ -34,7 +34,7 @@ class GameState(Enum):
     ROYAL_SELECTION             = "royal_selection"         # DONE
     CARD_ABILITY_2ND_TURN       = "card_ability_2nd_turn"   # TODO
     CARD_ABILITY_JOKER          = "card_ability_joker"      # TODO
-    CARD_ABILITY_2ND_COLOR      = "card_ability_2nd_color"  # TODO
+    CARD_ABILITY_2ND_COLOR      = "card_ability_2nd_color"  # DONE - TAKE 2ND SAME ability
     CARD_ABILITY_PRIVILEGE      = "card_ability_privilege"  # TODO
     CARD_ABILITY_STEAL          = "card_ability_steal"      # TODO
 
@@ -76,6 +76,7 @@ class GameStateConfig:
         GameState.DISCARD_TOKENS: SelectionRules(["Token"], 10, 1, {"discard_mode": True, "player_tokens_only": True, "allow_partial": True}),
         GameState.ROYAL_SELECTION: SelectionRules(["Royal"], 1, 1),
         GameState.CONFIRM_ROUND: SelectionRules([], 0),
+        GameState.CARD_ABILITY_2ND_COLOR: SelectionRules(["Token"], 1, 0, {"match_card_color": True, "board_tokens_only": True}),
     }
     
     @classmethod
@@ -192,6 +193,23 @@ class GameStateManager:
                     # Only allow one card total
                     if cards_selected >= 1:
                         return False, "Can only select one card or deck"
+            elif session.current_state == GameState.CARD_ABILITY_2ND_COLOR:
+                # Special handling for TAKE 2ND SAME ability - only allow tokens matching card color
+                if element_type_name == "Token":
+                    # Must be a board token (has "position" in metadata, no "player" key)
+                    if "player" in layout_element.metadata:
+                        return False, "Can only select tokens from the board"
+                    if "position" not in layout_element.metadata:
+                        return False, "Can only select tokens from the board"
+                    # Token color must match the pending ability card color
+                    pending_color = desk.pending_ability_card_color
+                    if pending_color:
+                        token_color = layout_element.element.color.upper() if hasattr(layout_element.element, 'color') else None
+                        if token_color != pending_color.upper():
+                            return False, f"Can only select {pending_color.lower()} tokens"
+                    # Only allow one token
+                    if len(session.current_selection) >= 1:
+                        return False, "Can only select one token"
             else:
                 # Original special rules for other states
                 if element_type_name == "Token":
@@ -325,6 +343,9 @@ class GameStateManager:
                 
             case GameState.CONFIRM_ROUND:
                 return GameStateManager._handle_confirm_round_buttons(session, button, desk)
+            
+            case GameState.CARD_ABILITY_2ND_COLOR:
+                return GameStateManager._handle_card_ability_2nd_color_buttons(session, button, desk)
         
         return session, None, "Unknown state or button"
     
@@ -423,6 +444,13 @@ class GameStateManager:
                     "level": selected_element.metadata["level"],
                     "index": selected_element.metadata["index"]
                 })
+                
+                # Check if card has "TAKE 2ND SAME" ability
+                if selected_card.ability == "TAKE 2ND SAME":
+                    # Store the card color for token selection validation
+                    desk.pending_ability_card_color = selected_card.color
+                    new_session = session.with_state_and_selection(GameState.CARD_ABILITY_2ND_COLOR, [])
+                    return new_session, action, f"Card purchased! You may take a {selected_card.color.lower()} token from the board."
                 
                 new_session = session.with_state_and_selection(GameState.POST_ACTION_CHECKS, [])
                 return new_session, action, "Card purchased successfully"
@@ -613,6 +641,29 @@ class GameStateManager:
         return session, None, f"Unknown action: {button.action}"
     
     @staticmethod
+    def _handle_card_ability_2nd_color_buttons(session: GameSessionState, button: ActionButton, desk: Any) -> Tuple[GameSessionState, Optional[Action], str]:
+        """Handle buttons in CARD_ABILITY_2ND_COLOR state (TAKE 2ND SAME ability)."""
+        match button.action:
+            case "confirm_selection":
+                # Check if player selected a token
+                if len(session.current_selection) == 1:
+                    # Take the selected token
+                    selected_element = session.current_selection[0]
+                    action = Action(ActionType.TAKE_ABILITY_TOKEN, {
+                        "token": selected_element.element,
+                        "position": selected_element.metadata["position"]
+                    })
+                    new_session = session.with_state_and_selection(GameState.POST_ACTION_CHECKS, [])
+                    return new_session, action, f"Took a {selected_element.element.color} token!"
+                else:
+                    # No token selected, just proceed
+                    # Clear the pending ability card color
+                    desk.pending_ability_card_color = None
+                    new_session = session.with_state_and_selection(GameState.POST_ACTION_CHECKS, [])
+                    return new_session, None, "Skipped taking a token"
+        return session, None, f"Unknown action: {button.action}"
+    
+    @staticmethod
     def get_current_action(session: GameSessionState, desk: Any) -> CurrentAction:
         """Get current action with enhanced state information."""
         player = desk.current_player
@@ -730,6 +781,19 @@ class GameStateManager:
                 buttons = [
                     ActionButton("Yes", "finish_round"),
                     ActionButton("No", "rollback_to_start")
+                ]
+                return CurrentAction(session.current_state, explanation, buttons)
+            
+            case GameState.CARD_ABILITY_2ND_COLOR:
+                # TAKE 2ND SAME ability - player can take a token matching the card color
+                card_color = desk.pending_ability_card_color or "matching"
+                selected_count = len(session.current_selection)
+                if selected_count == 0:
+                    explanation = f"You may take a {card_color.lower()} token from the board (optional)"
+                else:
+                    explanation = f"Selected 1 {card_color.lower()} token"
+                buttons = [
+                    ActionButton("Confirm selection", "confirm_selection")
                 ]
                 return CurrentAction(session.current_state, explanation, buttons)
                 
