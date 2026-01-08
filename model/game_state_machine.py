@@ -40,6 +40,9 @@ class GameState(Enum):
 
     # End of round
     CONFIRM_ROUND               = "confirm_round"           # DONE
+    
+    # Game over
+    GAME_OVER                   = "game_over"               # DONE - Victory achieved
 
 
 @dataclass
@@ -705,6 +708,14 @@ class GameStateManager:
                 # This prevents player from seeing next card and rolling back
                 filled_count = desk.pyramid.fill_all_empty_slots()
                 
+                # Check for victory BEFORE moving to next player or extra turn
+                victory_info = desk.current_player.get_victory_info()
+                if victory_info:
+                    # Player has won! Set winner and transition to GAME_OVER
+                    desk.winner = desk.current_player_index
+                    new_session = session.with_state_and_selection(GameState.GAME_OVER, [])
+                    return new_session, None, f"🎉 {desk.current_player.name} wins by reaching {victory_info['value']} {victory_info['condition']}!"
+                
                 # Check if player has an extra turn from TURN ability
                 if desk.has_extra_turn():
                     desk.clear_extra_turn()
@@ -963,5 +974,19 @@ class GameStateManager:
                     ActionButton("Confirm selection", "confirm_selection", enabled=(selected_count == 1))
                 ]
                 return CurrentAction(session.current_state, explanation, buttons)
+            
+            case GameState.GAME_OVER:
+                # Game has ended - show victory message with no buttons
+                winner = desk.players[desk.winner] if desk.winner is not None else None
+                if winner:
+                    victory_info = winner.get_victory_info()
+                    if victory_info:
+                        explanation = f"🎉 GAME OVER - {winner.name} wins by reaching {victory_info['value']} {victory_info['condition']}! 🎉"
+                    else:
+                        explanation = f"🎉 GAME OVER - {winner.name} wins! 🎉"
+                else:
+                    explanation = "🎉 GAME OVER 🎉"
+                # No buttons - game is frozen
+                return CurrentAction(session.current_state, explanation, [])
                 
         return CurrentAction(session.current_state, "Unknown state", []) 

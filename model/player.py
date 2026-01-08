@@ -105,10 +105,15 @@ class PlayerState:
             bag.return_tokens([token] * value)
         # Acquire card
         self.purchased.append(card)
-        # Update bonuses, points, crowns
-        # Skip bonus for joker cards - bonus is applied when color is assigned
+        # Update bonuses, points, crowns, and card_points
+        # Skip bonus and card_points for joker cards - applied when color is assigned
+        # Skip bonus and card_points for POINTS cards (they have no color bonus)
         if card.color.upper() != "JOKER" and card.color.upper() != "POINTS":
             self.bonuses[Token(card.color.lower())] = self.bonuses.get(Token(card.color), 0) + card.bonus
+            # Track points per card color for same-color victory condition
+            color_key = card.color.lower()
+            if color_key in self.card_points:
+                self.card_points[color_key] += card.points
         self.points += card.points
         self.crowns += card.crowns
 
@@ -163,13 +168,43 @@ class PlayerState:
         # Total crowns
         if self.crowns >= 10:
             return True
-        # Prestige points grouped by card color
-        color_scores: Dict[str, int] = {}
-        for card in self.purchased:
-            color_scores[card.color] = color_scores.get(card.color, 0) + card.points
-        if any(score >= 10 for score in color_scores.values()):
+        # Prestige points on cards of same color (using tracked card_points)
+        if any(score >= 10 for score in self.card_points.values()):
             return True
         return False
+    
+    def get_victory_info(self) -> Optional[Dict[str, Any]]:
+        """
+        Check victory conditions and return details about how the player won.
+        
+        Returns:
+            None if player hasn't won, otherwise a dict with:
+            - 'condition': str describing the win condition
+            - 'value': int of the winning score
+        """
+        # Check total prestige points
+        if self.points >= 20:
+            return {
+                'condition': 'prestige points',
+                'value': self.points
+            }
+        
+        # Check total crowns
+        if self.crowns >= 10:
+            return {
+                'condition': 'crowns',
+                'value': self.crowns
+            }
+        
+        # Check prestige points on cards of same color using tracked card_points
+        for color, score in self.card_points.items():
+            if score >= 10:
+                return {
+                    'condition': f'{color} card points',
+                    'value': score
+                }
+        
+        return None
     
     def get_token_count(self) -> int:
         """

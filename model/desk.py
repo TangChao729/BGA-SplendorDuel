@@ -308,7 +308,11 @@ class Desk:
                     # Change the card color
                     self.pending_joker_card.color = selected_color.upper()
                     # Apply the bonus that was skipped during purchase
-                    player.bonuses[Token(selected_color.lower())] = player.bonuses.get(Token(selected_color.lower()), 0) + self.pending_joker_card.bonus
+                    color_key = selected_color.lower()
+                    player.bonuses[Token(color_key)] = player.bonuses.get(Token(color_key), 0) + self.pending_joker_card.bonus
+                    # Update card_points for same-color victory tracking
+                    if color_key in player.card_points:
+                        player.card_points[color_key] += self.pending_joker_card.points
                     self.pending_joker_card = None
 
         # TODO: handle victory and turn advance in the controller

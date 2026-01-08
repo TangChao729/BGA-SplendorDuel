@@ -85,6 +85,8 @@ def test_pay_for_card_and_effects():
     # Points and crowns updated
     assert p.points == 3
     assert p.crowns == 1
+    # card_points tracker updated for same-color victory condition
+    assert p.card_points["white"] == 3
 
 
 def test_reserve_and_privileges():
@@ -112,16 +114,47 @@ def test_has_won_conditions():
     p = PlayerState()
     p.crowns = 10
     assert p.has_won()
-    # By same-color prestige
+    # By same-color prestige (using card_points tracker)
     p = PlayerState()
-    # Create two cards of color Blue summing 10 points
-    c1 = make_card(color="Blue", points=4)
-    c2 = make_card(color="Blue", points=6)
-    p.purchased = [c1, c2]
+    p.card_points["blue"] = 10  # Set card_points directly (simulating purchased cards)
     assert p.has_won()
     # Negative case
     p = PlayerState()
     assert not p.has_won()
+
+
+def test_get_victory_info():
+    """Test that get_victory_info returns correct details for each win condition."""
+    # Test prestige points victory
+    p = PlayerState()
+    p.points = 20
+    info = p.get_victory_info()
+    assert info is not None
+    assert info['condition'] == 'prestige points'
+    assert info['value'] == 20
+    
+    # Test crowns victory
+    p = PlayerState()
+    p.crowns = 10
+    info = p.get_victory_info()
+    assert info is not None
+    assert info['condition'] == 'crowns'
+    assert info['value'] == 10
+    
+    # Test same-color card points victory (using card_points tracker)
+    p = PlayerState()
+    p.card_points["blue"] = 10  # Set card_points directly (simulating purchased cards)
+    info = p.get_victory_info()
+    assert info is not None
+    assert 'blue' in info['condition'].lower()
+    assert info['value'] == 10
+    
+    # Test no victory
+    p = PlayerState()
+    p.points = 15
+    p.crowns = 5
+    info = p.get_victory_info()
+    assert info is None
 
 
 def test_json_serialization():
