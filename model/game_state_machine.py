@@ -492,11 +492,20 @@ class GameStateManager:
                     if total_bonuses == 0:
                         return session, None, "Cannot purchase joker card without any bonuses"
                 
-                action = Action(ActionType.PURCHASE_CARD, {
-                    "card": selected_card,
-                    "level": selected_element.metadata["level"],
-                    "index": selected_element.metadata["index"]
-                })
+                # Check if purchasing from reserved (no "level" key) or from pyramid
+                if "level" in selected_element.metadata:
+                    # Purchasing from pyramid
+                    action = Action(ActionType.PURCHASE_CARD, {
+                        "card": selected_card,
+                        "level": selected_element.metadata["level"],
+                        "index": selected_element.metadata["index"]
+                    })
+                else:
+                    # Purchasing from reserved cards
+                    action = Action(ActionType.PURCHASE_CARD, {
+                        "card": selected_card,
+                        "reserved_index": selected_element.metadata["index"]
+                    })
                 
                 # Check if card has "TAKE 2ND SAME" ability
                 if selected_card.ability == "TAKE 2ND SAME":

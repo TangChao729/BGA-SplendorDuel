@@ -145,54 +145,11 @@ if __name__ == '__main__':
         initial_privileges=cfg.get('privileges',3),
         asset_path='data/images'
     )
-    player1 = PlayerState("Player 1")
-    player1.privileges = 3
+    player1 = PlayerState("Player 1") 
     player2 = PlayerState("Player 2")
     ctrl.desk.add_player(player1, player2)
 
     # add artificial player data for testing
     ctrl.desk.board.fill_grid(ctrl.desk.bag.draw())
-    ctrl.desk.board.grid[0][2] = None
-    ctrl.desk.board.grid[1][2] = None
-    ctrl.desk.board.grid[2][0] = None
-    ctrl.desk.board.grid[3][0] = None
-    ctrl.desk.board.grid[4][0] = None
-    ctrl.desk.board.grid[0][1] = None
-    ctrl.desk.board.grid[1][1] = None
-    ctrl.desk.board.grid[2][1] = None
-    ctrl.desk.board.grid[3][1] = None
-    ctrl.desk.board.grid[4][1] = None
-    ctrl.desk.board.grid[2][2] = None
-    ctrl.desk.board.grid[3][2] = None
-    ctrl.desk.board.grid[4][2] = None
-    ctrl.desk.board.grid[4][3] = None
-    ctrl.desk.privileges = 0
-    player2.privileges = 1
-    player1.points = 0
-    player1.crowns = 0
-    player1.card_points = {'blue': 8, 'red': 0, 'green': 0, 'black': 0, 'white': 0}
-    player1.tokens = {Token('red'): 3, Token('blue'): 4, Token('black'): 2, Token('green'): 1, Token('gold'): 2, Token('white'): 2}
-    player2.tokens = {Token('red'): 1, Token('blue'): 0, Token('black'): 1, Token('green'): 1, Token('gold'): 0, Token('white'): 1}
-    # player1.tokens = {Token('red'): 3}
-        # ctrl.desk.players[0].privileges = 3
-    # ctrl.desk.players[0].tokens['black'] = 2
-    # ctrl.desk.players[0].tokens['red'] = 1
-    # ctrl.desk.players[0].tokens['green'] = 1
-    # ctrl.desk.players[0].tokens['blue'] = 1
-    # ctrl.desk.players[0].tokens['white'] = 1
-    # ctrl.desk.players[0].tokens['pearl'] = 1
-    # ctrl.desk.players[0].tokens['gold'] = 1
-    
-    # ctrl.desk.players[0].bonuses['black'] = 1
-    # ctrl.desk.players[0].bonuses['red'] = 1
-    # ctrl.desk.players[0].bonuses['green'] = 1
-    # ctrl.desk.players[0].bonuses['blue'] = 1
-    # ctrl.desk.players[0].bonuses['white'] = 1   
-    
-    # ctrl.desk.players[0].reserved.append(ctrl.desk.pyramid.decks.get(1).draw())  # reserve a card for testing
-    # ctrl.desk.board.grid[0][0] = Token('black')
-    # ctrl.desk.board.grid[1][1] = Token('red')
-    # ctrl.desk.board.grid[2][2] = Token('green')
-    # ctrl.desk.board.grid[3][3] = Token('blue')
-    # ctrl.desk.board.grid[4][4] = Token('white')
+    # player1.privileges = 3
     ctrl.run()

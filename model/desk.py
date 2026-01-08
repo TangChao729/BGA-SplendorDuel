@@ -194,6 +194,8 @@ class Desk:
             case ActionType.USE_PRIVILEGE:
                 player.use_privilege()
                 player.add_tokens(self.board.draw_tokens({action.payload["token"]: [action.payload["position"]]}))
+                # Return the privilege scroll to the board
+                self.privileges += 1
 
             case ActionType.REPLENISH_BOARD:
                 self.board.fill_grid(self.bag.draw())
@@ -210,7 +212,26 @@ class Desk:
                     # If current player has none, nothing happens
 
             case ActionType.TAKE_TOKENS:
-                player.add_tokens(self.board.draw_tokens(action.payload["combo"]))
+                combo = action.payload["combo"]
+                player.add_tokens(self.board.draw_tokens(combo))
+                
+                # Check if opponent should get a privilege:
+                # - 3 tokens of the same color
+                # - 2 Pearls
+                should_grant_privilege = False
+                for token, positions in combo.items():
+                    if len(positions) == 3:
+                        # 3 tokens of same color
+                        should_grant_privilege = True
+                        break
+                    if token.color == "pearl" and len(positions) >= 2:
+                        # 2 or more pearls
+                        should_grant_privilege = True
+                        break
+                
+                if should_grant_privilege:
+                    opponent = self.players[1 - self.current_player_index]
+                    self.grant_privilege_to_player(opponent)
 
             case ActionType.TAKE_GOLD_AND_RESERVE:
                 gold_token, gold_token_positions, card, level, idx = (
