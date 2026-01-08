@@ -106,7 +106,9 @@ class PlayerState:
         # Acquire card
         self.purchased.append(card)
         # Update bonuses, points, crowns
-        self.bonuses[Token(card.color.lower())] = self.bonuses.get(Token(card.color), 0) + 1
+        # Skip bonus for joker cards - bonus is applied when color is assigned
+        if card.color.upper() != "JOKER" and card.color.upper() != "POINTS":
+            self.bonuses[Token(card.color.lower())] = self.bonuses.get(Token(card.color), 0) + card.bonus
         self.points += card.points
         self.crowns += card.crowns
 
@@ -174,6 +176,15 @@ class PlayerState:
         Get the total number of tokens the player has
         """
         return sum(self.tokens.values())
+    
+    def get_bonuses(self) -> Dict[str, int]:
+        """
+        Get the player's bonuses as a dictionary with color strings as keys.
+        
+        Returns:
+            Dict[str, int]: Map of color string to bonus count.
+        """
+        return {token.color: count for token, count in self.bonuses.items()}
     
     def qualifies_for_royal(self) -> bool:
         """

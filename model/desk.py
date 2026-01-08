@@ -57,6 +57,8 @@ class Desk:
         # Pending steal return state (for STEAL ability - tracks where to return after stealing)
         # Values: "POST_ACTION_CHECKS" or "CHECK_DISCARD"
         self.pending_steal_return_state: Optional[str] = None
+        # Pending joker card (for 1 COLOR ability - tracks which card needs color assignment)
+        self.pending_joker_card: Optional[Card] = None
 
     @property
     def current_player(self) -> PlayerState:
@@ -293,6 +295,16 @@ class Desk:
                 player.add_tokens([token])
                 # Clear the pending steal return state
                 self.pending_steal_return_state = None
+
+            case ActionType.ASSIGN_JOKER_COLOR:
+                # Assign a color to the pending joker card
+                selected_color = action.payload["color"]
+                if self.pending_joker_card:
+                    # Change the card color
+                    self.pending_joker_card.color = selected_color.upper()
+                    # Apply the bonus that was skipped during purchase
+                    player.bonuses[Token(selected_color.lower())] = player.bonuses.get(Token(selected_color.lower()), 0) + self.pending_joker_card.bonus
+                    self.pending_joker_card = None
 
         # TODO: handle victory and turn advance in the controller
         # # After any action, check victory

@@ -1,7 +1,7 @@
 # Where I Left Off - Splendor Duel Project
 
 **Date:** January 2026  
-**Project Status:** ~85% Complete - Core game fully playable, missing some card abilities
+**Project Status:** ~95% Complete - Core game fully playable, all card abilities implemented
 
 ---
 
@@ -38,32 +38,34 @@ python overall.py
 
 ## 🚧 What's Not Working Yet
 
-### Missing Card Abilities (3 total)
+### ✅ All Card Abilities Implemented!
 
-1. **"TAKE 2ND SAME"** - After purchasing, take 1 token matching card color
-   - Cards with this ability: 1-19, 1-24, 1-27, 1-32, 1-37 (and more)
-   - Currently: Ability is ignored, card works but no token taken
+1. **"TAKE 2ND SAME"** - ✅ Implemented
+   - After purchasing, take 1 token matching card color from the board
+   - State: `CARD_ABILITY_2ND_COLOR`
 
-2. **"STEAL"** - After purchasing, steal 1 gem/pearl from opponent
-   - Cards with this ability: 2-05, 2-09, 2-13, 2-17, 2-21
-   - Currently: Ability is ignored, card works but no steal
+2. **"STEAL"** - ✅ Implemented
+   - After purchasing card OR claiming royal, steal 1 gem/pearl from opponent
+   - State: `CARD_ABILITY_STEAL`
 
-3. **"1 COLOR" (Joker)** - Must overlap existing bonus card, takes its color
-   - Cards with this ability: 2-01, 2-02, 2-03, 2-04, 2-25, 2-26, 2-27, 3-01
-   - Currently: **Cannot purchase these cards** (would break game logic)
-   - Most complex ability to implement
+3. **"1 COLOR" (Joker)** - ✅ Implemented
+   - After purchasing, choose a bonus color you already have
+   - Card becomes that color permanently
+   - "1 COLOR/TURN" also grants extra turn
+   - State: `CARD_ABILITY_JOKER`
+   - Prevents purchase if player has no bonuses
 
-### Other Missing Features
+### Remaining Features
 
-4. **Victory Detection** - Game doesn't end when someone wins
+1. **Victory Detection** - Game doesn't end when someone wins
    - Logic exists in `player.py:has_won()` but not enforced
    - Game continues indefinitely
 
-5. **Rollback Prevention** - Can always rollback even after committed actions
+2. **Rollback Prevention** - Can always rollback even after committed actions
    - Should prevent rollback after replenishing board
    - Should prevent rollback after reserving face-down cards
 
-6. **Face-down Deck Reservations** - Can't click on decks to reserve
+3. **Face-down Deck Reservations** - Can't click on decks to reserve
    - Currently only pyramid cards are clickable
    - Decks are rendered but not interactive
 
@@ -91,44 +93,43 @@ Key Files You'll Need to Modify:
 
 ## 🎯 Next Steps (Priority Order)
 
-### Immediate Next Task: Implement "TAKE 2ND SAME" Ability
+### All Card Abilities Complete! ✅
+
+The following abilities are now fully implemented:
+- **"TAKE 2ND SAME"** - Working ✅
+- **"STEAL"** - Working ✅
+- **"1 COLOR" (Joker)** - Working ✅
+- **"1 COLOR/TURN"** - Working ✅
+
+### Immediate Next Task: Implement Victory Detection
 
 **Why start here?**
-- Simplest of the 3 missing abilities
-- Establishes pattern for other abilities
-- High impact (many cards use this)
+- Game currently runs indefinitely
+- Logic already exists in `player.py:has_won()` but not enforced
+- Relatively simple to implement
 
 **What to do:**
-1. Open `model/game_state_machine.py`
-2. Find `CARD_ABILITY_2ND_COLOR` state (line 37) - already defined!
-3. Add selection rules (see DEVELOPMENT_ROADMAP.md Task 1)
-4. Add handler function `_handle_card_ability_2nd_color_buttons()`
-5. Add case to `handle_button_click()` match statement
-6. Add case to `get_current_action()` for UI buttons
-7. Open `model/desk.py`
-8. Find `apply_action()` under `PURCHASE_CARD` case (line 224)
-9. Add check for `card.ability == "TAKE 2ND SAME"` after line 244
-10. Write tests in `tests/test_game_state_machine.py`
+1. Add `GAME_OVER` state to `GameState` enum
+2. Check for victory conditions after `CONFIRM_ROUND`
+3. Display winner and end game
 
-**Estimated time:** 1 hour
-
-**Reference:** See `support/DEVELOPMENT_ROADMAP.md` for detailed instructions
+**Estimated time:** 1-2 hours
 
 ---
 
 ## 🧪 Testing Status
 
-**Current:** 52 tests passing ✅
+**Current:** 83 tests passing ✅
 
 ```bash
 # Run tests
 pytest -v
 
 # Expected output
-52 passed in 0.5s
+83 passed in 0.11s
 ```
 
-**After completing all abilities:** Target 70+ tests
+**All card ability tests implemented!**
 
 ---
 
@@ -183,7 +184,7 @@ Run `tests/visual_asset_checker.py` to verify all assets load correctly.
 
 ## 🔄 State Machine Overview
 
-Current state flow (11 states implemented):
+Current state flow (14 states implemented):
 
 ```
 START_OF_ROUND
@@ -191,21 +192,27 @@ START_OF_ROUND
   ├─> REPLENISH_BOARD (optional)
   └─> [Mandatory Actions]
       ├─> PURCHASE_CARD
+      │     ├─> CARD_ABILITY_2ND_COLOR (if "TAKE 2ND SAME")
+      │     ├─> CARD_ABILITY_STEAL (if "STEAL")
+      │     └─> CARD_ABILITY_JOKER (if "1 COLOR" or "1 COLOR/TURN")
       ├─> TAKE_TOKENS
       └─> TAKE_GOLD_AND_RESERVE
 
 POST_ACTION_CHECKS
   └─> ROYAL_SELECTION (if qualified)
-      └─> CHECK_DISCARD
-          └─> DISCARD_TOKENS (if >10 tokens)
-              └─> CONFIRM_ROUND
-                  └─> START_OF_ROUND (next player)
+      └─> CARD_ABILITY_STEAL (if royal has "STEAL")
+          └─> CHECK_DISCARD
+              └─> DISCARD_TOKENS (if >10 tokens)
+                  └─> CONFIRM_ROUND
+                      └─> START_OF_ROUND (next player)
 ```
 
-**Missing states** (not yet implemented):
-- `CARD_ABILITY_2ND_COLOR` (for TAKE 2ND SAME)
-- `CARD_ABILITY_STEAL` (for STEAL)
-- `CARD_ABILITY_JOKER` (for 1 COLOR)
+**All card ability states implemented!**
+- `CARD_ABILITY_2ND_COLOR` (for TAKE 2ND SAME) ✅
+- `CARD_ABILITY_STEAL` (for STEAL) ✅
+- `CARD_ABILITY_JOKER` (for 1 COLOR) ✅
+
+**Remaining** (not yet implemented):
 - `GAME_OVER` (for victory)
 
 ---
@@ -214,26 +221,26 @@ POST_ACTION_CHECKS
 
 | Category | Complete | Total | % |
 |----------|----------|-------|---|
-| Core Game Loop | 11 | 11 | 100% |
+| Core Game Loop | 14 | 14 | 100% |
 | Mandatory Actions | 3 | 3 | 100% |
 | Optional Actions | 2 | 2 | 100% |
-| Card Abilities | 2 | 5 | 40% |
+| Card Abilities | 5 | 5 | 100% |
 | Victory Handling | 0 | 1 | 0% |
-| **Overall** | **~85%** | **100%** | **85%** |
+| **Overall** | **~95%** | **100%** | **95%** |
 
 ---
 
 ## 🚀 Estimated Time to Completion
 
-| Task | Time |
-|------|------|
-| TAKE 2ND SAME ability | 1 hour |
-| STEAL ability | 1 hour |
-| Joker (1 COLOR) ability | 2-3 hours |
-| Victory enforcement | 1-2 hours |
-| Rollback prevention | 1 hour |
-| Face-down reservations | 30 min |
-| **Total** | **6.5-9.5 hours** |
+| Task | Status | Time |
+|------|--------|------|
+| TAKE 2ND SAME ability | ✅ Done | - |
+| STEAL ability | ✅ Done | - |
+| Joker (1 COLOR) ability | ✅ Done | - |
+| Victory enforcement | TODO | 1-2 hours |
+| Rollback prevention | TODO | 1 hour |
+| Face-down reservations | TODO | 30 min |
+| **Total Remaining** | | **2.5-3.5 hours** |
 
 ---
 

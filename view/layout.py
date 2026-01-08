@@ -7,6 +7,16 @@ from model.actions import ActionButton
 # A simple rectangle type: (x, y, width, height)
 Rect = Tuple[int, int, int, int]
 
+
+@dataclass
+class BonusColor:
+    """Represents a selectable bonus color for joker card ability."""
+    color: str
+    
+    def __repr__(self) -> str:
+        return f"BonusColor({self.color})"
+
+
 @dataclass
 class LayoutElement:
     """Represents a clickable game element with its screen position and metadata."""

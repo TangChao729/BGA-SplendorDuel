@@ -78,6 +78,7 @@ class GameStateConfig:
         GameState.CONFIRM_ROUND: SelectionRules([], 0),
         GameState.CARD_ABILITY_2ND_COLOR: SelectionRules(["Token"], 1, 0, {"match_card_color": True, "board_tokens_only": True}),
         GameState.CARD_ABILITY_STEAL: SelectionRules(["Token"], 1, 0, {"opponent_tokens_only": True, "no_gold": True}),
+        GameState.CARD_ABILITY_JOKER: SelectionRules(["BonusColor"], 1, 1, {"player_bonuses_only": True}),
     }
     
     @classmethod
@@ -226,6 +227,26 @@ class GameStateManager:
                     # Only allow one token
                     if len(session.current_selection) >= 1:
                         return False, "Can only select one token"
+            elif session.current_state == GameState.CARD_ABILITY_JOKER:
+                # Special handling for JOKER ability - only allow selecting bonus colors the player has
+                if element_type_name == "BonusColor":
+                    # Must belong to current player
+                    if "player" not in layout_element.metadata:
+                        return False, "Can only select your own bonuses"
+                    if layout_element.metadata.get("player") != desk.current_player.name:
+                        return False, "Can only select your own bonuses"
+                    # Player must have at least 1 bonus of this color
+                    # Get color from element (BonusColor object) or metadata
+                    if hasattr(layout_element.element, 'color'):
+                        color = layout_element.element.color.lower()
+                    else:
+                        color = layout_element.metadata.get("color", "").lower()
+                    player_bonuses = desk.current_player.get_bonuses()
+                    if player_bonuses.get(color, 0) <= 0:
+                        return False, f"You don't have any {color} bonuses"
+                    # Only allow one selection
+                    if len(session.current_selection) >= 1:
+                        return False, "Can only select one color"
             else:
                 # Original special rules for other states
                 if element_type_name == "Token":
@@ -365,6 +386,9 @@ class GameStateManager:
             
             case GameState.CARD_ABILITY_STEAL:
                 return GameStateManager._handle_card_ability_steal_buttons(session, button, desk)
+            
+            case GameState.CARD_ABILITY_JOKER:
+                return GameStateManager._handle_card_ability_joker_buttons(session, button, desk)
         
         return session, None, "Unknown state or button"
     
@@ -458,6 +482,13 @@ class GameStateManager:
                 if not desk.current_player.can_afford(selected_card):
                     return session, None, "Cannot afford this card"
                 
+                # Check if it's a joker card - player must have at least 1 bonus to purchase
+                if selected_card.ability and "1 COLOR" in selected_card.ability:
+                    player_bonuses = desk.current_player.get_bonuses()
+                    total_bonuses = sum(player_bonuses.values())
+                    if total_bonuses == 0:
+                        return session, None, "Cannot purchase joker card without any bonuses"
+                
                 action = Action(ActionType.PURCHASE_CARD, {
                     "card": selected_card,
                     "level": selected_element.metadata["level"],
@@ -477,6 +508,16 @@ class GameStateManager:
                     desk.pending_steal_return_state = "POST_ACTION_CHECKS"
                     new_session = session.with_state_and_selection(GameState.CARD_ABILITY_STEAL, [])
                     return new_session, action, "Card purchased! You may steal a token from your opponent."
+                
+                # Check if card has joker ability ("1 COLOR" or "1 COLOR/TURN")
+                if selected_card.ability and "1 COLOR" in selected_card.ability:
+                    # Store the card for color assignment
+                    desk.pending_joker_card = selected_card
+                    # Check if it also grants extra turn
+                    if "TURN" in selected_card.ability:
+                        desk.set_extra_turn()
+                    new_session = session.with_state_and_selection(GameState.CARD_ABILITY_JOKER, [])
+                    return new_session, action, "Card purchased! Choose a color for your joker card."
                 
                 new_session = session.with_state_and_selection(GameState.POST_ACTION_CHECKS, [])
                 return new_session, action, "Card purchased successfully"
@@ -726,6 +767,31 @@ class GameStateManager:
         return session, None, f"Unknown action: {button.action}"
     
     @staticmethod
+    def _handle_card_ability_joker_buttons(session: GameSessionState, button: ActionButton, desk: Any) -> Tuple[GameSessionState, Optional[Action], str]:
+        """Handle buttons in CARD_ABILITY_JOKER state (1 COLOR ability)."""
+        match button.action:
+            case "confirm_selection":
+                # Player must select a color (mandatory)
+                if len(session.current_selection) != 1:
+                    return session, None, "Must select a color for your joker card"
+                
+                # Get the selected color from BonusColor element or metadata
+                selected_element = session.current_selection[0]
+                if hasattr(selected_element.element, 'color'):
+                    selected_color = selected_element.element.color
+                else:
+                    selected_color = selected_element.metadata.get("color", "")
+                
+                # Create action to assign the color to the joker card
+                action = Action(ActionType.ASSIGN_JOKER_COLOR, {
+                    "color": selected_color
+                })
+                
+                new_session = session.with_state_and_selection(GameState.POST_ACTION_CHECKS, [])
+                return new_session, action, f"Joker card is now {selected_color.upper()}!"
+        return session, None, f"Unknown action: {button.action}"
+    
+    @staticmethod
     def get_current_action(session: GameSessionState, desk: Any) -> CurrentAction:
         """Get current action with enhanced state information."""
         player = desk.current_player
@@ -869,6 +935,24 @@ class GameStateManager:
                     explanation = f"Selected 1 {selected_token.color} token to steal"
                 buttons = [
                     ActionButton("Confirm selection", "confirm_selection")
+                ]
+                return CurrentAction(session.current_state, explanation, buttons)
+            
+            case GameState.CARD_ABILITY_JOKER:
+                # JOKER ability - player must choose a color for the joker card
+                selected_count = len(session.current_selection)
+                if selected_count == 0:
+                    explanation = "Select a bonus color to assign to your joker card"
+                else:
+                    # Get color from BonusColor element or metadata
+                    selected_element = session.current_selection[0]
+                    if hasattr(selected_element.element, 'color'):
+                        selected_color = selected_element.element.color
+                    else:
+                        selected_color = selected_element.metadata.get("color", "")
+                    explanation = f"Joker card will become {selected_color.upper()}"
+                buttons = [
+                    ActionButton("Confirm selection", "confirm_selection", enabled=(selected_count == 1))
                 ]
                 return CurrentAction(session.current_state, explanation, buttons)
                 

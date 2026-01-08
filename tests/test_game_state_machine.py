@@ -6,6 +6,7 @@ from model.game_state_machine import (
 from model.actions import Action, ActionType, ActionButton
 from model.tokens import Token
 from model.cards import Card
+from view.layout import BonusColor
 
 
 class TestGameState:
@@ -607,4 +608,246 @@ class TestCardAbilitySteal:
         assert action is not None
         assert action.type == ActionType.CLAIM_ROYAL
         # pending_steal_return_state should be set to CHECK_DISCARD (from royal)
-        assert mock_desk_for_steal.pending_steal_return_state == "CHECK_DISCARD" 
+        assert mock_desk_for_steal.pending_steal_return_state == "CHECK_DISCARD"
+
+
+class TestCardAbilityJoker:
+    """Test the CARD_ABILITY_JOKER state and related functionality."""
+    
+    @pytest.fixture
+    def mock_desk_for_joker(self):
+        """Create a mock desk for joker ability testing."""
+        desk = Mock()
+        desk.current_player = Mock()
+        desk.current_player.name = "Player 1"
+        # Player has bonuses for black and blue
+        desk.current_player.get_bonuses = Mock(return_value={
+            "black": 2,
+            "blue": 1,
+            "red": 0,
+            "green": 0,
+            "white": 0
+        })
+        desk.pending_joker_card = None
+        return desk
+    
+    def test_card_ability_joker_selection_rules(self):
+        """Test that the joker state has correct selection rules."""
+        rules = GameStateConfig.get_selection_rules(GameState.CARD_ABILITY_JOKER)
+        
+        assert "BonusColor" in rules.allowed_types
+        assert rules.max_selections == 1
+        assert rules.min_selections == 1  # Mandatory selection
+        assert rules.special_rules.get("player_bonuses_only") is True
+    
+    def test_can_select_own_bonus_color_with_bonuses(self, mock_desk_for_joker):
+        """Test that player can select a color they have bonuses for."""
+        layout_element = Mock()
+        layout_element.element = BonusColor("black")  # Use BonusColor wrapper
+        layout_element.metadata = {"player": "Player 1", "color": "black"}
+        
+        session = GameSessionState(GameState.CARD_ABILITY_JOKER, [])
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_for_joker, element_type_name="BonusColor"
+        )
+        
+        assert can_select is True
+    
+    def test_cannot_select_color_without_bonuses(self, mock_desk_for_joker):
+        """Test that player cannot select a color they have no bonuses for."""
+        layout_element = Mock()
+        layout_element.element = BonusColor("red")  # Use BonusColor wrapper
+        layout_element.metadata = {"player": "Player 1", "color": "red"}
+        
+        session = GameSessionState(GameState.CARD_ABILITY_JOKER, [])
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_for_joker, element_type_name="BonusColor"
+        )
+        
+        assert can_select is False
+        assert "red" in reason.lower() or "bonus" in reason.lower()
+    
+    def test_cannot_select_opponent_bonus(self, mock_desk_for_joker):
+        """Test that player cannot select opponent's bonuses."""
+        layout_element = Mock()
+        layout_element.element = BonusColor("black")  # Use BonusColor wrapper
+        layout_element.metadata = {"player": "Player 2", "color": "black"}  # Wrong player
+        
+        session = GameSessionState(GameState.CARD_ABILITY_JOKER, [])
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_for_joker, element_type_name="BonusColor"
+        )
+        
+        assert can_select is False
+        assert "own" in reason.lower() or "your" in reason.lower()
+    
+    def test_cannot_select_more_than_one_color(self, mock_desk_for_joker):
+        """Test that only one color can be selected."""
+        # Already have one selection
+        existing_selection = Mock()
+        existing_selection.element = BonusColor("black")  # Use BonusColor wrapper
+        existing_selection.metadata = {"player": "Player 1", "color": "black"}
+        
+        layout_element = Mock()
+        layout_element.element = BonusColor("blue")  # Use BonusColor wrapper
+        layout_element.metadata = {"player": "Player 1", "color": "blue"}
+        
+        session = GameSessionState(GameState.CARD_ABILITY_JOKER, [existing_selection])
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_for_joker, element_type_name="BonusColor"
+        )
+        
+        assert can_select is False
+        assert "1" in reason or "one" in reason.lower()
+    
+    def test_confirm_with_selection_creates_action(self, mock_desk_for_joker):
+        """Test that confirming with selection creates ASSIGN_JOKER_COLOR action."""
+        layout_element = Mock()
+        layout_element.element = BonusColor("black")  # Use BonusColor wrapper
+        layout_element.metadata = {"player": "Player 1", "color": "black"}
+        
+        session = GameSessionState(GameState.CARD_ABILITY_JOKER, [layout_element])
+        button = ActionButton("Confirm selection", "confirm_selection")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_joker
+        )
+        
+        assert new_session.current_state == GameState.POST_ACTION_CHECKS
+        assert action is not None
+        assert action.type == ActionType.ASSIGN_JOKER_COLOR
+        assert action.payload["color"] == "black"
+        assert "BLACK" in message.upper()
+    
+    def test_confirm_without_selection_fails(self, mock_desk_for_joker):
+        """Test that confirming without selection fails (mandatory)."""
+        session = GameSessionState(GameState.CARD_ABILITY_JOKER, [])
+        button = ActionButton("Confirm selection", "confirm_selection")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_joker
+        )
+        
+        # Should stay in same state and not create action
+        assert new_session.current_state == GameState.CARD_ABILITY_JOKER
+        assert action is None
+        assert "must" in message.lower() or "select" in message.lower()
+    
+    def test_get_current_action_shows_correct_ui(self, mock_desk_for_joker):
+        """Test that get_current_action returns correct UI for this state."""
+        session = GameSessionState(GameState.CARD_ABILITY_JOKER, [])
+        
+        current_action = GameStateManager.get_current_action(session, mock_desk_for_joker)
+        
+        assert current_action.state == GameState.CARD_ABILITY_JOKER
+        assert "color" in current_action.explanation.lower() or "joker" in current_action.explanation.lower()
+        assert len(current_action.buttons) == 1
+        assert current_action.buttons[0].action == "confirm_selection"
+        assert current_action.buttons[0].enabled is False  # No selection yet
+    
+    def test_get_current_action_with_selection_enables_button(self, mock_desk_for_joker):
+        """Test that button is enabled when selection is made."""
+        layout_element = Mock()
+        layout_element.element = BonusColor("black")  # Use BonusColor wrapper
+        layout_element.metadata = {"player": "Player 1", "color": "black"}
+        
+        session = GameSessionState(GameState.CARD_ABILITY_JOKER, [layout_element])
+        
+        current_action = GameStateManager.get_current_action(session, mock_desk_for_joker)
+        
+        assert current_action.buttons[0].enabled is True
+        assert "BLACK" in current_action.explanation.upper()
+    
+    def test_purchase_joker_card_transitions_to_joker_state(self, mock_desk_for_joker):
+        """Test that purchasing a joker card transitions to the correct state."""
+        # Create mock joker card
+        mock_card = Mock()
+        mock_card.ability = "1 COLOR"
+        mock_card.color = "JOKER"
+        
+        # Create mock layout element for the card
+        layout_element = Mock()
+        layout_element.element = mock_card
+        layout_element.metadata = {"level": 2, "index": 0}
+        
+        # Set up desk to allow purchase
+        mock_desk_for_joker.current_player.can_afford = Mock(return_value=True)
+        
+        session = GameSessionState(GameState.PURCHASE_CARD, [layout_element])
+        button = ActionButton("Confirm", "confirm")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_joker
+        )
+        
+        # Should transition to CARD_ABILITY_JOKER state
+        assert new_session.current_state == GameState.CARD_ABILITY_JOKER
+        assert action is not None
+        assert action.type == ActionType.PURCHASE_CARD
+        # pending_joker_card should be set
+        assert mock_desk_for_joker.pending_joker_card == mock_card
+    
+    def test_purchase_joker_turn_card_sets_extra_turn(self, mock_desk_for_joker):
+        """Test that purchasing a 1 COLOR/TURN card also sets extra turn."""
+        # Create mock joker card with TURN
+        mock_card = Mock()
+        mock_card.ability = "1 COLOR/TURN"
+        mock_card.color = "JOKER"
+        
+        # Create mock layout element for the card
+        layout_element = Mock()
+        layout_element.element = mock_card
+        layout_element.metadata = {"level": 3, "index": 0}
+        
+        # Set up desk to allow purchase
+        mock_desk_for_joker.current_player.can_afford = Mock(return_value=True)
+        
+        session = GameSessionState(GameState.PURCHASE_CARD, [layout_element])
+        button = ActionButton("Confirm", "confirm")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_joker
+        )
+        
+        # Should transition to CARD_ABILITY_JOKER state
+        assert new_session.current_state == GameState.CARD_ABILITY_JOKER
+        # set_extra_turn should be called
+        mock_desk_for_joker.set_extra_turn.assert_called_once()
+    
+    def test_cannot_purchase_joker_without_bonuses(self, mock_desk_for_joker):
+        """Test that player cannot purchase joker card without any bonuses."""
+        # Create mock joker card
+        mock_card = Mock()
+        mock_card.ability = "1 COLOR"
+        mock_card.color = "JOKER"
+        
+        # Create mock layout element for the card
+        layout_element = Mock()
+        layout_element.element = mock_card
+        layout_element.metadata = {"level": 2, "index": 0}
+        
+        # Set up desk to allow purchase but player has no bonuses
+        mock_desk_for_joker.current_player.can_afford = Mock(return_value=True)
+        mock_desk_for_joker.current_player.get_bonuses = Mock(return_value={
+            "black": 0,
+            "blue": 0,
+            "red": 0,
+            "green": 0,
+            "white": 0
+        })
+        
+        session = GameSessionState(GameState.PURCHASE_CARD, [layout_element])
+        button = ActionButton("Confirm", "confirm")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_joker
+        )
+        
+        # Should stay in PURCHASE_CARD state and not create action
+        assert new_session.current_state == GameState.PURCHASE_CARD
+        assert action is None
+        assert "bonus" in message.lower() or "joker" in message.lower() 

@@ -64,11 +64,12 @@ def test_pay_for_card_and_effects():
     # Give tokens
     p.tokens[Token("white")] = 2
     p.tokens[Token("gold")] = 1
-    # Card: color white, cost white 2, points 3, crowns 1
+    # Card: color white, cost white 2, points 3, crowns 1, bonus 1
     card = make_card(
         id="1",
         color="white",
         points=3,
+        bonus=1,
         crowns=1,
         cost={Token("white"): 2, Token("black"): 0, Token("red"): 0, Token("green"): 0, Token("blue"): 0, Token("pearl"): 0},
     )
@@ -79,7 +80,7 @@ def test_pay_for_card_and_effects():
     assert p.tokens[Token("gold")] == 1  # no wild used
     # Check purchased
     assert card in p.purchased
-    # Bonus incremented
+    # Bonus incremented based on card.bonus
     assert p.bonuses[Token("white")] == 1
     # Points and crowns updated
     assert p.points == 3
