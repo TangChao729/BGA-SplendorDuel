@@ -573,9 +573,12 @@ class GameStateManager:
                 if card_layout_element is None:
                     return session, None, "Must select exactly one card"
                 
-                if isinstance(card_layout_element.element, Deck):
+                # Determine if reserving from face-down deck or visible pyramid card
+                is_deck_reservation = isinstance(card_layout_element.element, Deck)
+                
+                if is_deck_reservation:
                     card = card_layout_element.element.draw(1)[0]
-                elif isinstance(card_layout_element.element, Card):
+                else:
                     card = card_layout_element.element
                 
                 action = Action(ActionType.TAKE_GOLD_AND_RESERVE, {
@@ -583,7 +586,8 @@ class GameStateManager:
                     "gold_token_positions": gold_token_layout_element.metadata.get("position"),
                     "card": card,
                     "card_level": card_layout_element.metadata.get("level"),
-                    "card_index": card_layout_element.metadata.get("index")
+                    "card_index": card_layout_element.metadata.get("index"),
+                    "is_deck_reservation": is_deck_reservation
                 })
 
 
@@ -697,6 +701,10 @@ class GameStateManager:
         """Handle buttons in CONFIRM_ROUND state."""
         match button.action:
             case "finish_round":
+                # Fill empty pyramid slots now that the round is confirmed
+                # This prevents player from seeing next card and rolling back
+                filled_count = desk.pyramid.fill_all_empty_slots()
+                
                 # Check if player has an extra turn from TURN ability
                 if desk.has_extra_turn():
                     desk.clear_extra_turn()

@@ -704,10 +704,12 @@ class GameView:
             [("level_3", 1), ("level_2", 1), ("level_1", 1)],
         )
         # Draw face-down cards
+        # Visual layout: level 3 at top, level 2 in middle, level 1 at bottom
         for i in range(3):
-            deck: Deck = desk.pyramid.decks[i+1]
+            level = 3 - i  # i=0 -> level 3, i=1 -> level 2, i=2 -> level 1
+            deck: Deck = desk.pyramid.decks[level]  # Match deck to visual level
             x, y, w, h = face_down_rect.children[f"level_{i+1}"]
-            card_sprite = self.assets.get_card_sprite(level=3-i, index=0)
+            card_sprite = self.assets.get_card_sprite(level=level, index=0)
             scaled_card, (x, y) = self._scale_image_to_fit(
                 card_sprite,
                 pygame.Rect(x, y, w, h),
@@ -718,10 +720,10 @@ class GameView:
 
             # Register face-down card for click detection
             self.layout_registry.register(
-                f"face_down_card_{i+1}",
+                f"face_down_card_{level}",
                 pygame.Rect(x, y, scaled_card.get_width(), scaled_card.get_height()),
                 deck,
-                {"level": 3-i, "index": 0}
+                {"level": level, "index": 0}
             )
 
         # Layout for face-up cards

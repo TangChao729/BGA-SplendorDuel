@@ -220,13 +220,16 @@ class Desk:
                     action.payload["card_level"],
                     action.payload["card_index"],
                 )
+                is_deck_reservation = action.payload.get("is_deck_reservation", False)
 
                 player.add_tokens(self.board.draw_gold({Token("gold"): [gold_token_positions]}))
-                if action.payload["card_index"] == 0:
+                if is_deck_reservation:
+                    # Reserving from face-down deck - card already drawn in state machine
                     player.reserve_card(card)
                 else:
+                    # Reserving from visible pyramid - remove card and leave slot empty until end of round
                     player.reserve_card(self.pyramid.get_card(level, idx))
-                    self.pyramid.fill_card(level, idx)
+                    # Note: get_card already sets slot to None, but we do it explicitly for clarity
 
             case ActionType.PURCHASE_CARD:
                 if "reserved_index" in action.payload:
@@ -235,7 +238,9 @@ class Desk:
                 else:
                     level, idx = action.payload["level"], action.payload["index"]
                     card = self.pyramid.get_card(level, idx)
-                    self.pyramid.fill_card(level, idx)
+                    # Don't refill immediately - leave slot empty until end of round
+                    # This prevents player from seeing next card and rolling back
+                    self.pyramid.slots[level][idx] = None
 
                 player.pay_for_card(card, self.bag)
                 

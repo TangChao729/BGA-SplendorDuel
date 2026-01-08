@@ -218,6 +218,24 @@ class Pyramid(Piece):
     def fill_card(self, level: int, index: int) -> None:
         drawn = self.decks[level].draw(1)
         self.slots[level][index] = drawn[0] if drawn else None
+    
+    def fill_all_empty_slots(self) -> int:
+        """
+        Fill all empty slots in the pyramid with cards from their respective decks.
+        Called at the end of a player's turn to reveal new cards.
+        
+        Returns:
+            int: Number of slots that were filled.
+        """
+        filled_count = 0
+        for level, slots in self.slots.items():
+            for idx, card in enumerate(slots):
+                if card is None:
+                    drawn = self.decks[level].draw(1)
+                    if drawn:
+                        self.slots[level][idx] = drawn[0]
+                        filled_count += 1
+        return filled_count
 
     def to_dict(self) -> Dict[int, List[Optional[Dict[str, Any]]]]:
         return {
