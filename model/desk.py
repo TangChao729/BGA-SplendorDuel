@@ -54,6 +54,9 @@ class Desk:
         self.extra_turn: bool = False
         # Pending ability card color (for TAKE 2ND SAME ability)
         self.pending_ability_card_color: Optional[str] = None
+        # Pending steal return state (for STEAL ability - tracks where to return after stealing)
+        # Values: "POST_ACTION_CHECKS" or "CHECK_DISCARD"
+        self.pending_steal_return_state: Optional[str] = None
 
     @property
     def current_player(self) -> PlayerState:
@@ -279,6 +282,17 @@ class Desk:
                 player.add_tokens(self.board.draw_tokens({token: [position]}))
                 # Clear the pending ability card color
                 self.pending_ability_card_color = None
+
+            case ActionType.STEAL_TOKEN:
+                # Steal a token from opponent as part of STEAL ability
+                token = action.payload["token"]
+                opponent = self.players[1 - self.current_player_index]
+                # Remove token from opponent
+                opponent.remove_tokens({token: 1})
+                # Add token to current player
+                player.add_tokens([token])
+                # Clear the pending steal return state
+                self.pending_steal_return_state = None
 
         # TODO: handle victory and turn advance in the controller
         # # After any action, check victory

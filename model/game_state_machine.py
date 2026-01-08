@@ -36,7 +36,7 @@ class GameState(Enum):
     CARD_ABILITY_JOKER          = "card_ability_joker"      # TODO
     CARD_ABILITY_2ND_COLOR      = "card_ability_2nd_color"  # DONE - TAKE 2ND SAME ability
     CARD_ABILITY_PRIVILEGE      = "card_ability_privilege"  # TODO
-    CARD_ABILITY_STEAL          = "card_ability_steal"      # TODO
+    CARD_ABILITY_STEAL          = "card_ability_steal"      # DONE - STEAL ability
 
     # End of round
     CONFIRM_ROUND               = "confirm_round"           # DONE
@@ -77,6 +77,7 @@ class GameStateConfig:
         GameState.ROYAL_SELECTION: SelectionRules(["Royal"], 1, 1),
         GameState.CONFIRM_ROUND: SelectionRules([], 0),
         GameState.CARD_ABILITY_2ND_COLOR: SelectionRules(["Token"], 1, 0, {"match_card_color": True, "board_tokens_only": True}),
+        GameState.CARD_ABILITY_STEAL: SelectionRules(["Token"], 1, 0, {"opponent_tokens_only": True, "no_gold": True}),
     }
     
     @classmethod
@@ -207,6 +208,21 @@ class GameStateManager:
                         token_color = layout_element.element.color.upper() if hasattr(layout_element.element, 'color') else None
                         if token_color != pending_color.upper():
                             return False, f"Can only select {pending_color.lower()} tokens"
+                    # Only allow one token
+                    if len(session.current_selection) >= 1:
+                        return False, "Can only select one token"
+            elif session.current_state == GameState.CARD_ABILITY_STEAL:
+                # Special handling for STEAL ability - only allow opponent's tokens (no gold)
+                if element_type_name == "Token":
+                    # Must be an opponent's token (has "player" in metadata, not current player)
+                    if "player" not in layout_element.metadata:
+                        return False, "Can only select opponent's tokens"
+                    if layout_element.metadata.get("player") == desk.current_player.name:
+                        return False, "Can only select opponent's tokens"
+                    # Cannot steal gold tokens
+                    token_color = layout_element.element.color.lower() if hasattr(layout_element.element, 'color') else None
+                    if token_color == "gold":
+                        return False, "Cannot steal gold tokens"
                     # Only allow one token
                     if len(session.current_selection) >= 1:
                         return False, "Can only select one token"
@@ -346,6 +362,9 @@ class GameStateManager:
             
             case GameState.CARD_ABILITY_2ND_COLOR:
                 return GameStateManager._handle_card_ability_2nd_color_buttons(session, button, desk)
+            
+            case GameState.CARD_ABILITY_STEAL:
+                return GameStateManager._handle_card_ability_steal_buttons(session, button, desk)
         
         return session, None, "Unknown state or button"
     
@@ -451,6 +470,13 @@ class GameStateManager:
                     desk.pending_ability_card_color = selected_card.color
                     new_session = session.with_state_and_selection(GameState.CARD_ABILITY_2ND_COLOR, [])
                     return new_session, action, f"Card purchased! You may take a {selected_card.color.lower()} token from the board."
+                
+                # Check if card has "STEAL" ability
+                if selected_card.ability == "STEAL":
+                    # Store where to return after stealing
+                    desk.pending_steal_return_state = "POST_ACTION_CHECKS"
+                    new_session = session.with_state_and_selection(GameState.CARD_ABILITY_STEAL, [])
+                    return new_session, action, "Card purchased! You may steal a token from your opponent."
                 
                 new_session = session.with_state_and_selection(GameState.POST_ACTION_CHECKS, [])
                 return new_session, action, "Card purchased successfully"
@@ -613,6 +639,13 @@ class GameStateManager:
                     "index": royal_index
                 })
                 
+                # Check if royal has "STEAL" ability
+                if hasattr(selected_royal, 'ability') and selected_royal.ability == "STEAL":
+                    # Store where to return after stealing (from royal, return to CHECK_DISCARD)
+                    desk.pending_steal_return_state = "CHECK_DISCARD"
+                    new_session = session.with_state_and_selection(GameState.CARD_ABILITY_STEAL, [])
+                    return new_session, action, "Royal claimed! You may steal a token from your opponent."
+                
                 # After claiming royal, route to CHECK_DISCARD
                 new_session = session.with_state_and_selection(GameState.CHECK_DISCARD, [])
                 return new_session, action, "Royal claimed! Checking token count..."
@@ -661,6 +694,35 @@ class GameStateManager:
                     desk.pending_ability_card_color = None
                     new_session = session.with_state_and_selection(GameState.POST_ACTION_CHECKS, [])
                     return new_session, None, "Skipped taking a token"
+        return session, None, f"Unknown action: {button.action}"
+    
+    @staticmethod
+    def _handle_card_ability_steal_buttons(session: GameSessionState, button: ActionButton, desk: Any) -> Tuple[GameSessionState, Optional[Action], str]:
+        """Handle buttons in CARD_ABILITY_STEAL state (STEAL ability from card or royal)."""
+        match button.action:
+            case "confirm_selection":
+                # Determine which state to return to based on where steal was triggered
+                return_state = desk.pending_steal_return_state
+                if return_state == "CHECK_DISCARD":
+                    next_state = GameState.CHECK_DISCARD
+                else:
+                    next_state = GameState.POST_ACTION_CHECKS
+                
+                # Check if player selected a token
+                if len(session.current_selection) == 1:
+                    # Steal the selected token
+                    selected_element = session.current_selection[0]
+                    action = Action(ActionType.STEAL_TOKEN, {
+                        "token": selected_element.element
+                    })
+                    new_session = session.with_state_and_selection(next_state, [])
+                    return new_session, action, f"Stole a {selected_element.element.color} token from opponent!"
+                else:
+                    # No token selected, just proceed
+                    # Clear the pending steal return state
+                    desk.pending_steal_return_state = None
+                    new_session = session.with_state_and_selection(next_state, [])
+                    return new_session, None, "Skipped stealing a token"
         return session, None, f"Unknown action: {button.action}"
     
     @staticmethod
@@ -792,6 +854,19 @@ class GameStateManager:
                     explanation = f"You may take a {card_color.lower()} token from the board (optional)"
                 else:
                     explanation = f"Selected 1 {card_color.lower()} token"
+                buttons = [
+                    ActionButton("Confirm selection", "confirm_selection")
+                ]
+                return CurrentAction(session.current_state, explanation, buttons)
+            
+            case GameState.CARD_ABILITY_STEAL:
+                # STEAL ability - player can steal a token from opponent
+                selected_count = len(session.current_selection)
+                if selected_count == 0:
+                    explanation = "You may steal a gem or pearl token from your opponent (optional)"
+                else:
+                    selected_token = session.current_selection[0].element
+                    explanation = f"Selected 1 {selected_token.color} token to steal"
                 buttons = [
                     ActionButton("Confirm selection", "confirm_selection")
                 ]

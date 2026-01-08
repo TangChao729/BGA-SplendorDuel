@@ -4,7 +4,7 @@ import os
 
 from model.desk import Desk
 from model.actions import ActionButton
-from model.game_state_machine import CurrentAction
+from model.game_state_machine import CurrentAction, GameState
 from model.cards import Card, Deck
 from model.tokens import Token
 from view.assets import AssetManager
@@ -95,10 +95,20 @@ class GameView:
         # Clear the layout registry at the start of each frame
         self.layout_registry.clear()
         
+        # Determine which player's tokens should be clickable based on current state
+        # For STEAL ability, opponent's tokens should be clickable
+        # For DISCARD_TOKENS, current player's tokens should be clickable
+        in_steal_state = current_action.state == GameState.CARD_ABILITY_STEAL
+        in_discard_state = current_action.state == GameState.DISCARD_TOKENS
+        
+        # Player 0 tokens clickable if: (current player is 0 and in discard) OR (current player is 1 and in steal)
+        player0_tokens_clickable = (desk.current_player_index == 0 and in_discard_state) or (desk.current_player_index == 1 and in_steal_state)
+        player1_tokens_clickable = (desk.current_player_index == 1 and in_discard_state) or (desk.current_player_index == 0 and in_steal_state)
+        
         self.draw_background()
         self.draw_main_panel(desk, message_history, self.view_split.children["main"])
-        self.draw_player_panel(desk.players[0], self.right_split.children["player1"], is_current_player=(desk.current_player_index == 0))
-        self.draw_player_panel(desk.players[1], self.right_split.children["player2"], is_current_player=(desk.current_player_index == 1))
+        self.draw_player_panel(desk.players[0], self.right_split.children["player1"], is_current_player=(desk.current_player_index == 0), tokens_clickable=player0_tokens_clickable)
+        self.draw_player_panel(desk.players[1], self.right_split.children["player2"], is_current_player=(desk.current_player_index == 1), tokens_clickable=player1_tokens_clickable)
         self.draw_action_panel(desk, self.action_panel_rect, current_action)
 
         # highlight the selected element
@@ -154,9 +164,15 @@ class GameView:
         )
         self.screen.blit(bg, (0, 0))
 
-    def draw_player_panel(self, player: Any, rect: Any, is_current_player: bool = False) -> None:
+    def draw_player_panel(self, player: Any, rect: Any, is_current_player: bool = False, tokens_clickable: bool = False) -> None:
         """
         Draw the player panel, including name, score, counters, tokens, cards, and reserved cards.
+        
+        Args:
+            player: The player whose panel to draw
+            rect: The rectangle to draw in
+            is_current_player: Whether this is the current player's turn
+            tokens_clickable: Whether the player's tokens should be clickable (for discard or steal states)
         """
         rect = Margin(rect, (MARGIN_MEDIUM, MARGIN_MEDIUM, MARGIN_MEDIUM, MARGIN_MEDIUM)).rect
         x0, y0, w, h = rect
@@ -185,7 +201,7 @@ class GameView:
         self._draw_player_name(player, Margin(player_panel.children["player_name"], (MARGIN_SMALL,)*4).rect)
         self._draw_score_tracker(player, Margin(player_panel.children["score_tracker"], (MARGIN_SMALL,)*4).rect)
         self._draw_privilege_royal_token_counter(player, Margin(player_panel.children["counters"], (MARGIN_SMALL,)*4).rect)
-        self._draw_token_area(player.tokens, Margin(player_panel.children["tokens_sum"], (MARGIN_SMALL,)*4).rect, player_name=player.name, clickable=is_current_player)
+        self._draw_token_area(player.tokens, Margin(player_panel.children["tokens_sum"], (MARGIN_SMALL,)*4).rect, player_name=player.name, clickable=tokens_clickable)
         self._draw_card_area(player.bonuses, Margin(player_panel.children["cards_sum"], (MARGIN_SMALL,)*4).rect)
         self._draw_reserved_cards(player.reserved, Margin(player_panel.children["reserved"], (MARGIN_SMALL,)*4).rect)
 

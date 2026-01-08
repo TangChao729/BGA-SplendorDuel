@@ -398,4 +398,213 @@ class TestCardAbility2ndColor:
         assert action is not None
         assert action.type == ActionType.PURCHASE_CARD
         # pending_ability_card_color should be set
-        assert mock_desk_with_ability.pending_ability_card_color == "BLACK" 
+        assert mock_desk_with_ability.pending_ability_card_color == "BLACK"
+
+
+class TestCardAbilitySteal:
+    """Test the CARD_ABILITY_STEAL state (STEAL ability)."""
+    
+    @pytest.fixture
+    def mock_desk_for_steal(self):
+        """Create mock desk for steal ability tests."""
+        desk = Mock()
+        desk.pending_steal_return_state = "POST_ACTION_CHECKS"
+        desk.current_player = Mock()
+        desk.current_player.name = "Player 1"
+        # Mock opponent
+        opponent = Mock()
+        opponent.name = "Player 2"
+        desk.players = [desk.current_player, opponent]
+        return desk
+    
+    def test_card_ability_steal_selection_rules(self):
+        """Test that selection rules exist for CARD_ABILITY_STEAL."""
+        rules = GameStateConfig.get_selection_rules(GameState.CARD_ABILITY_STEAL)
+        assert "Token" in rules.allowed_types
+        assert rules.max_selections == 1
+        assert rules.min_selections == 0  # Optional selection
+        assert rules.special_rules.get("opponent_tokens_only") is True
+        assert rules.special_rules.get("no_gold") is True
+    
+    def test_can_select_opponent_token(self, mock_desk_for_steal):
+        """Test that player can select opponent's token (non-gold)."""
+        session = GameSessionState(GameState.CARD_ABILITY_STEAL, [])
+        
+        # Mock an opponent's token
+        layout_element = Mock()
+        layout_element.element = Mock()
+        layout_element.element.color = "red"
+        layout_element.metadata = {"player": "Player 2"}  # Opponent's token
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_for_steal, "Token"
+        )
+        assert can_select is True
+        assert reason == ""
+    
+    def test_cannot_select_own_token(self, mock_desk_for_steal):
+        """Test that player cannot select their own token."""
+        session = GameSessionState(GameState.CARD_ABILITY_STEAL, [])
+        
+        # Mock current player's token
+        layout_element = Mock()
+        layout_element.element = Mock()
+        layout_element.element.color = "red"
+        layout_element.metadata = {"player": "Player 1"}  # Current player's token
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_for_steal, "Token"
+        )
+        assert can_select is False
+        assert "opponent" in reason.lower()
+    
+    def test_cannot_select_board_token(self, mock_desk_for_steal):
+        """Test that player cannot select board tokens (only opponent's)."""
+        session = GameSessionState(GameState.CARD_ABILITY_STEAL, [])
+        
+        # Mock a board token (no "player" in metadata)
+        layout_element = Mock()
+        layout_element.element = Mock()
+        layout_element.element.color = "red"
+        layout_element.metadata = {"position": (2, 3)}  # Board token
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_for_steal, "Token"
+        )
+        assert can_select is False
+        assert "opponent" in reason.lower()
+    
+    def test_cannot_select_gold_token(self, mock_desk_for_steal):
+        """Test that player cannot steal gold tokens."""
+        session = GameSessionState(GameState.CARD_ABILITY_STEAL, [])
+        
+        # Mock opponent's gold token
+        layout_element = Mock()
+        layout_element.element = Mock()
+        layout_element.element.color = "gold"
+        layout_element.metadata = {"player": "Player 2"}  # Opponent's token
+        
+        can_select, reason = GameStateManager.can_select_element(
+            session, layout_element, mock_desk_for_steal, "Token"
+        )
+        assert can_select is False
+        assert "gold" in reason.lower()
+    
+    def test_confirm_with_selection_creates_steal_action(self, mock_desk_for_steal):
+        """Test that confirming with a selection creates STEAL_TOKEN action."""
+        # Create a selection
+        layout_element = Mock()
+        layout_element.element = Token("red")
+        layout_element.metadata = {"player": "Player 2"}
+        
+        session = GameSessionState(GameState.CARD_ABILITY_STEAL, [layout_element])
+        button = ActionButton("Confirm selection", "confirm_selection")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_steal
+        )
+        
+        assert new_session.current_state == GameState.POST_ACTION_CHECKS
+        assert action is not None
+        assert action.type == ActionType.STEAL_TOKEN
+        assert action.payload["token"] == layout_element.element
+        assert "stole" in message.lower() or "red" in message.lower()
+    
+    def test_confirm_without_selection_skips(self, mock_desk_for_steal):
+        """Test that confirming without selection skips (no action created)."""
+        session = GameSessionState(GameState.CARD_ABILITY_STEAL, [])
+        button = ActionButton("Confirm selection", "confirm_selection")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_steal
+        )
+        
+        assert new_session.current_state == GameState.POST_ACTION_CHECKS
+        assert action is None
+        assert "skip" in message.lower()
+    
+    def test_steal_from_royal_returns_to_check_discard(self, mock_desk_for_steal):
+        """Test that stealing from royal returns to CHECK_DISCARD state."""
+        mock_desk_for_steal.pending_steal_return_state = "CHECK_DISCARD"
+        
+        # Create a selection
+        layout_element = Mock()
+        layout_element.element = Token("blue")
+        layout_element.metadata = {"player": "Player 2"}
+        
+        session = GameSessionState(GameState.CARD_ABILITY_STEAL, [layout_element])
+        button = ActionButton("Confirm selection", "confirm_selection")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_steal
+        )
+        
+        # Should return to CHECK_DISCARD since triggered from royal
+        assert new_session.current_state == GameState.CHECK_DISCARD
+        assert action is not None
+        assert action.type == ActionType.STEAL_TOKEN
+    
+    def test_get_current_action_shows_correct_ui(self, mock_desk_for_steal):
+        """Test that get_current_action returns correct UI for this state."""
+        session = GameSessionState(GameState.CARD_ABILITY_STEAL, [])
+        
+        current_action = GameStateManager.get_current_action(session, mock_desk_for_steal)
+        
+        assert current_action.state == GameState.CARD_ABILITY_STEAL
+        assert "opponent" in current_action.explanation.lower() or "steal" in current_action.explanation.lower()
+        assert len(current_action.buttons) == 1
+        assert current_action.buttons[0].action == "confirm_selection"
+    
+    def test_purchase_card_with_steal_ability_transitions_to_steal_state(self, mock_desk_for_steal):
+        """Test that purchasing a card with STEAL ability transitions to the correct state."""
+        # Create mock card with STEAL ability
+        mock_card = Mock()
+        mock_card.ability = "STEAL"
+        mock_card.color = "BLACK"
+        
+        # Create mock layout element for the card
+        layout_element = Mock()
+        layout_element.element = mock_card
+        layout_element.metadata = {"level": 2, "index": 0}
+        
+        # Set up desk to allow purchase
+        mock_desk_for_steal.current_player.can_afford = Mock(return_value=True)
+        
+        session = GameSessionState(GameState.PURCHASE_CARD, [layout_element])
+        button = ActionButton("Confirm", "confirm")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_steal
+        )
+        
+        # Should transition to CARD_ABILITY_STEAL state
+        assert new_session.current_state == GameState.CARD_ABILITY_STEAL
+        assert action is not None
+        assert action.type == ActionType.PURCHASE_CARD
+        # pending_steal_return_state should be set to POST_ACTION_CHECKS
+        assert mock_desk_for_steal.pending_steal_return_state == "POST_ACTION_CHECKS"
+    
+    def test_claim_royal_with_steal_ability_transitions_to_steal_state(self, mock_desk_for_steal):
+        """Test that claiming a royal with STEAL ability transitions to the correct state."""
+        # Create mock royal with STEAL ability
+        mock_royal = Mock()
+        mock_royal.ability = "STEAL"
+        
+        # Create mock layout element for the royal
+        layout_element = Mock()
+        layout_element.element = mock_royal
+        layout_element.metadata = {"index": 0}
+        
+        session = GameSessionState(GameState.ROYAL_SELECTION, [layout_element])
+        button = ActionButton("Confirm Royal", "confirm_royal")
+        
+        new_session, action, message = GameStateManager.handle_button_click(
+            session, button, mock_desk_for_steal
+        )
+        
+        # Should transition to CARD_ABILITY_STEAL state
+        assert new_session.current_state == GameState.CARD_ABILITY_STEAL
+        assert action is not None
+        assert action.type == ActionType.CLAIM_ROYAL
+        # pending_steal_return_state should be set to CHECK_DISCARD (from royal)
+        assert mock_desk_for_steal.pending_steal_return_state == "CHECK_DISCARD" 

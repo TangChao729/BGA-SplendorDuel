@@ -162,9 +162,14 @@ if __name__ == '__main__':
     ctrl.desk.board.grid[2][1] = None
     ctrl.desk.board.grid[3][1] = None
     ctrl.desk.board.grid[4][1] = None
+    ctrl.desk.board.grid[2][2] = None
+    ctrl.desk.board.grid[3][2] = None
+    ctrl.desk.board.grid[4][2] = None
+    ctrl.desk.board.grid[4][3] = None
     ctrl.desk.privileges = 0
     player2.privileges = 1
     player1.tokens = {Token('red'): 3, Token('blue'): 4, Token('black'): 2, Token('green'): 1, Token('gold'): 2, Token('white'): 2}
+    player2.tokens = {Token('red'): 1, Token('blue'): 0, Token('black'): 1, Token('green'): 1, Token('gold'): 0, Token('white'): 1}
     # player1.tokens = {Token('red'): 3}
         # ctrl.desk.players[0].privileges = 3
     # ctrl.desk.players[0].tokens['black'] = 2
