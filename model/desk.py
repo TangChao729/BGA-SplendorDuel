@@ -344,6 +344,23 @@ class Desk:
         # # Advance turn
         # self.next_player()
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize full game state for wire transmission."""
+        return {
+            "pyramid": self.pyramid.to_dict(),
+            "board": self.board.to_dict(),
+            "bag": self.bag.to_dict(),
+            "royals": {str(k): (v.to_dict() if v else None) for k, v in self.royals.items()},
+            "privileges": self.privileges,
+            "players": [p.to_json() for p in self.players],
+            "current_player_index": self.current_player_index,
+            "winner": self.winner,
+            "extra_turn": self.extra_turn,
+            "pending_ability_card_color": self.pending_ability_card_color,
+            "pending_steal_return_state": self.pending_steal_return_state,
+            "pending_joker_card": self.pending_joker_card.to_dict() if self.pending_joker_card else None,
+        }
+
     def is_game_over(self) -> bool:
         """
         Check whether the game has finished.

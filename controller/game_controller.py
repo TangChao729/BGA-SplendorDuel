@@ -14,6 +14,7 @@ from model.game_state_machine import GameState, CurrentAction, GameSessionState,
 from view.assets import AssetManager  # assets.py is in view/ directory
 from view.game_view import GameView   # game_view.py is in view/ directory
 from view.layout import LayoutElement
+from model.element_reference import ElementReference
 
 # Screen dimensions (should match those in game_view)
 from view.game_view import SCREEN_WIDTH, SCREEN_HEIGHT
@@ -97,10 +98,18 @@ class GameController:
     def _handle_element_selection(self, layout_element: LayoutElement) -> None:
         """Handle element selection using stateless GameStateManager."""
         element_type_name = type(layout_element.element).__name__
-        
+
+        # Wrap LayoutElement into ElementReference (decouples model from view)
+        element_ref = ElementReference(
+            name=layout_element.name,
+            element=layout_element.element,
+            element_type=element_type_name,
+            metadata=layout_element.metadata,
+        )
+
         # Use stateless function
         new_session, success, message = GameStateManager.select_element(
-            self.session_state, layout_element, self.desk, element_type_name
+            self.session_state, element_ref, self.desk, element_type_name
         )
         
         # Update session state

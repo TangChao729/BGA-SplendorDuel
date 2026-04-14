@@ -99,6 +99,13 @@ class Bag(Piece):
             ctr[t] = ctr.get(t, 0) + 1
         return ctr
 
+    def to_dict(self) -> Dict[str, int]:
+        """Serialize remaining token counts for wire transmission."""
+        counts: Dict[str, int] = {}
+        for t in self._tokens:
+            counts[t.color] = counts.get(t.color, 0) + 1
+        return counts
+
     def is_empty(self) -> bool:
         """
         Check if the bag is empty.

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 # if TYPE_CHECKING:
 from model.tokens import Token
 from model.cards import Card, Deck
-from view.layout import LayoutElement
+from model.element_reference import ElementReference
 from model.actions import ActionType, Action, ActionButton
 
 
@@ -110,7 +110,7 @@ class CurrentAction:
 class GameSessionState:
     """Immutable state object representing the current game session UI state."""
     current_state: GameState
-    current_selection: List[LayoutElement]  # LayoutElement objects
+    current_selection: List[ElementReference]
     
     def with_state(self, new_state: GameState) -> 'GameSessionState':
         """Return a new session state with updated game state."""
@@ -123,6 +123,13 @@ class GameSessionState:
     def with_state_and_selection(self, new_state: GameState, new_selection: List[Any]) -> 'GameSessionState':
         """Return a new session state with both state and selection updated."""
         return GameSessionState(new_state, new_selection.copy())
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize for transmission over the WebSocket wire."""
+        return {
+            "current_state": self.current_state.value,
+            "current_selection": [ref.name for ref in self.current_selection],
+        }
 
 
 class GameStateManager:
@@ -145,7 +152,7 @@ class GameStateManager:
         Returns (can_select, reason_if_not)
         """
         if element_type_name is None:
-            element_type_name = type(layout_element.element).__name__
+            element_type_name = layout_element.element_type
         
         rules = GameStateManager.get_selection_rules(session.current_state)
         
@@ -180,7 +187,7 @@ class GameStateManager:
                 decks_selected = 0
                 
                 for selected_element in session.current_selection:
-                    selected_type = type(selected_element.element).__name__
+                    selected_type = selected_element.element_type
                     if selected_type == "Token" and hasattr(selected_element.element, 'color') and selected_element.element.color == "gold":
                         gold_tokens_selected += 1
                     elif selected_type == "Card" or selected_type == "Deck":
@@ -272,15 +279,15 @@ class GameStateManager:
         if layout_element in session.current_selection:
             new_selection = [elem for elem in session.current_selection if elem != layout_element]
             new_session = session.with_selection(new_selection)
-            element_name = element_type_name or type(layout_element.element).__name__
+            element_name = element_type_name or layout_element.element_type
             return new_session, True, f"Deselected {element_name}"
-        
+
         # Check if we can select this element
         can_select, reason = GameStateManager.can_select_element(session, layout_element, desk, element_type_name)
         if can_select:
             new_selection = session.current_selection + [layout_element]
             new_session = session.with_selection(new_selection)
-            element_name = element_type_name or type(layout_element.element).__name__
+            element_name = element_type_name or layout_element.element_type
             return new_session, True, f"Selected {element_name}"
         else:
             return session, False, reason
@@ -574,7 +581,7 @@ class GameStateManager:
                 card_layout_element = None
                 
                 for selected_element in session.current_selection:
-                    element_type = type(selected_element.element).__name__
+                    element_type = selected_element.element_type
                     if element_type == "Token" and hasattr(selected_element.element, 'color') and selected_element.element.color == "gold":
                         gold_token_layout_element = selected_element
                     elif element_type == "Card" or element_type == "Deck":
@@ -586,7 +593,7 @@ class GameStateManager:
                     return session, None, "Must select exactly one card"
                 
                 # Determine if reserving from face-down deck or visible pyramid card
-                is_deck_reservation = isinstance(card_layout_element.element, Deck)
+                is_deck_reservation = card_layout_element.element_type == "Deck"
                 
                 if is_deck_reservation:
                     card = card_layout_element.element.draw(1)[0]
