@@ -71,7 +71,8 @@ class GameController:
                         self.add_message(f"Action executed: {action.type.name}")
             
             # Use session state for rendering
-            self.view.render(self.desk, self.message_history, self.current_action, self.session_state.current_selection)
+            selected_names = [ref.name for ref in self.session_state.current_selection]
+            self.view.render(self.desk, self.message_history, self.current_action, selected_names)
             self.clock.tick(30)
         pygame.quit()
 

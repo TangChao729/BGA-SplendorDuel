@@ -88,9 +88,10 @@ class GameView:
             [("player1", 1), ("player2", 1)],
         )
 
-    def render(self, desk: Desk, message_history: List[str], current_action: CurrentAction, current_selection: List[LayoutElement]) -> None:
+    def render(self, desk: Desk, message_history: List[str], current_action: CurrentAction, selected_names: List[str]) -> None:
         """
         Render the entire game view, including background, main panel, and player panels.
+        selected_names: list of ElementReference.name strings for elements to highlight.
         """
         # Clear the layout registry at the start of each frame
         self.layout_registry.clear()
@@ -116,9 +117,11 @@ class GameView:
         self.draw_player_panel(desk.players[1], self.right_split.children["player2"], is_current_player=(desk.current_player_index == 1), tokens_clickable=player1_tokens_clickable, bonuses_clickable=player1_bonuses_clickable)
         self.draw_action_panel(desk, self.action_panel_rect, current_action)
 
-        # highlight the selected element
-        for element in current_selection:
-            self._highlight_rect(element.rect)
+        # Highlight selected elements — resolve names to LayoutElements (which carry .rect)
+        # after panels have been drawn and the registry has been populated for this frame.
+        for name in selected_names:
+            for layout_element in self.layout_registry.find_elements_by_name(name):
+                self._highlight_rect(layout_element.rect)
 
         # highlight the current player
         if desk.current_player_index == 0:
