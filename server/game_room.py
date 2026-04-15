@@ -190,7 +190,7 @@ class GameRoom:
                     name=f"card_reserved_{player_index}_{idx}",
                     element=card,
                     element_type="Card",
-                    metadata={"reserved_index": idx, "player": self.desk.players[player_index].name},
+                    metadata={"index": idx, "player": self.desk.players[player_index].name},
                 )
             elif "level" in metadata and "index" in metadata:
                 level = int(metadata["level"])
@@ -236,7 +236,7 @@ class GameRoom:
                 name=f"bonus_color_{color}",
                 element=BonusColor(color),
                 element_type="BonusColor",
-                metadata={"color": color},
+                metadata={"color": color, "player": self.desk.players[player_index].name},
             )
 
         return None
